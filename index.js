@@ -73,7 +73,7 @@ export default class NTRU {
 }
 
 // Function to compute the degree of a polynomial
-function degree(poly) {
+export function degree(poly) {
   for (let i = poly.length - 1; i >= 0; i--) {
     if (poly[i] !== 0) return i;
   }
@@ -81,13 +81,13 @@ function degree(poly) {
 }
 
 // Function to trim leading zeros from a polynomial
-function trimPolynomial(poly) {
+export function trimPolynomial(poly) {
   let d = degree(poly);
   return d >= 0 ? poly.slice(0, d + 1) : [0];
 }
 
 // Function to compute the multiplicative inverse modulo p
-function modInverse(a, p) {
+export function modInverse(a, p) {
   a = ((a % p) + p) % p;
   for (let x = 1; x < p; x++) {
     if ((a * x) % p === 1) {
@@ -98,7 +98,7 @@ function modInverse(a, p) {
 }
 
 // Function to add two polynomials modulo p
-function addPolynomials(a, b, p) {
+export function addPolynomials(a, b, p) {
   const maxLength = Math.max(a.length, b.length);
   const result = [];
   for (let i = 0; i < maxLength; i++) {
@@ -110,7 +110,7 @@ function addPolynomials(a, b, p) {
 }
 
 // Function to subtract two polynomials modulo p
-function subtractPolynomials(a, b, p) {
+export function subtractPolynomials(a, b, p) {
   const maxLength = Math.max(a.length, b.length);
   const result = [];
   for (let i = 0; i < maxLength; i++) {
@@ -122,7 +122,7 @@ function subtractPolynomials(a, b, p) {
 }
 
 // Function to multiply two polynomials modulo p
-function multiplyPolynomials(a, b, p) {
+export function multiplyPolynomials(a, b, p) {
   if (a.length === 0 || b.length === 0) return [0];
   const result = new Array(a.length + b.length - 1).fill(0);
   for (let i = 0; i < a.length; i++) {
@@ -134,7 +134,7 @@ function multiplyPolynomials(a, b, p) {
 }
 
 // Function to divide two polynomials modulo p
-function dividePolynomials(a, b, p) {
+export function dividePolynomials(a, b, p) {
   if (degree(b) === -1) {
     throw new Error("Cannot divide by zero polynomial.");
   }
@@ -173,7 +173,7 @@ function dividePolynomials(a, b, p) {
 }
 
 // Function to multiply a polynomial by a scalar modulo p
-function multiplyPolynomialsByScalar(poly, scalar, p) {
+export function multiplyPolynomialsByScalar(poly, scalar, p) {
   return poly.map(coeff => (coeff * scalar) % p);
 }
 
@@ -194,7 +194,7 @@ function multiplyPolynomialsByScalar(poly, scalar, p) {
 //                    = (x^2 + 2x + 3)*(2x^2 - 1) + 1
 //                    = 1 mod q
 // 
-function extendedEuclideanAlgorithm(a, b, p) {
+export function extendedEuclideanAlgorithm(a, b, p) {
   let r0 = a.slice();
   let r1 = b.slice();
   let s0 = [1];
