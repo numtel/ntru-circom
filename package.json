@@ -1,0 +1,25 @@
+{
+  "name": "ntru-circom",
+  "version": "0.0.1",
+  "description": "NTRU encryption in Javascript and Circom",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --timeout 5000"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/numtel/ntru-circom.git"
+  },
+  "author": "numtel <ben@latenightsketches.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/numtel/ntru-circom/issues"
+  },
+  "homepage": "https://github.com/numtel/ntru-circom#readme",
+  "devDependencies": {
+    "circomkit": "^0.3.1",
+    "circomlib": "^2.0.5",
+    "mocha": "^10.8.2"
+  }
+}
