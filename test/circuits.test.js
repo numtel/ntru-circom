@@ -1,8 +1,11 @@
+import { strictEqual } from 'node:assert';
+
 import { Circomkit } from 'circomkit';
 
 import {
   degree,
   modInverse,
+  addPolynomials,
 } from '../index.js';
 
 const SNARK_FIELD_SIZE = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001n;
@@ -18,7 +21,7 @@ describe('circom implementation', () => {
   [ [4,2,0,3], [0,0,0], [4,2,0,0] ].forEach((poly, index) => {
     it(`should calculate the degree of a polynomial #${index}`, async () => {
       const ref = degree(poly);
-      const circuit = await circomkit.WitnessTester('degree', {
+      const circuit = await circomkit.WitnessTester(`degree${index}`, {
         file: 'polynomials',
         template: 'Degree',
         dir: 'test/polynomials',
@@ -38,7 +41,7 @@ describe('circom implementation', () => {
       Math.ceil(Math.log2(p)) + 2 // + 2 just to be sure
     ];
     it(`should calculate the modulus of ${p}`, async () => {
-      const circuit = await circomkit.WitnessTester('modulus3', {
+      const circuit = await circomkit.WitnessTester(`modulus${p}`, {
         file: 'polynomials',
         template: 'Modulus',
         dir: 'test/polynomials',
@@ -53,7 +56,7 @@ describe('circom implementation', () => {
     });
 
     it(`should calculate the modInverse mod ${p}`, async () => {
-      const circuit = await circomkit.WitnessTester('modInverse3', {
+      const circuit = await circomkit.WitnessTester(`modInverse${p}`, {
         file: 'polynomials',
         template: 'ModInverse',
         dir: 'test/polynomials',
@@ -66,6 +69,29 @@ describe('circom implementation', () => {
           { out: ref === null ? 0 : ref }
         );
       }
+    });
+  });
+
+  [ [[1,2], [2,3], 8], [[1,2], [2,3], 3], [[81,2,96], [48,2,31], 128] ].forEach((polys, index) => {
+    it(`should calculate the addition of the polynomials #${index}`, async () => {
+      strictEqual(polys[0].length, polys[1].length);
+      const p = polys[2];
+      const circuit = await circomkit.WitnessTester(`addpoly${index}`, {
+        file: 'polynomials',
+        template: 'AddPolynomials',
+        dir: 'test/polynomials',
+        params: [
+          p,
+          // p fits inside an integer of n bits:
+          Math.ceil(Math.log2(p)) + 2, // + 2 just to be sure
+          polys[0].length,
+        ],
+      });
+      const ref = addPolynomials(polys[0], polys[1], p);
+      await circuit.expectPass(
+        { a: polys[0], b: polys[1] },
+        { out: ref }
+      );
     });
   });
 

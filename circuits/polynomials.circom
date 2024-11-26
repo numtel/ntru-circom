@@ -53,3 +53,15 @@ template ModInverse(p, n) {
   }
   out <== buffer;
 }
+
+template AddPolynomials(p, np, N) {
+  signal input a[N];
+  signal input b[N];
+  signal output out[N];
+
+  for (var i = 0; i < N; i++) {
+    var abP = Modulus(p, np)(a[i] + b[i]);
+    var abPP = Modulus(p, np)(abP + p);
+    out[i] <== abPP;
+  }
+}

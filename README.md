@@ -6,6 +6,7 @@ NTRU (post-quantum asymmetric lattice) encryption in Javascript and Circom
 
 * [x] Javascript implementation
 * [ ] circom implementation
+* [ ] make it work with n=701, q=8192
 
 ## Installation
 
