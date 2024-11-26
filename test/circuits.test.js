@@ -13,26 +13,25 @@ const circomkit = new Circomkit({
 });
 
 describe('circom implementation', () => {
-  it('should calculate the degree of a polynomial', async () => {
-    const poly = [4,2,0,3];
-    const ref = degree(poly);
-    const circuit = await circomkit.WitnessTester('degree', {
-      file: 'polynomials',
-      template: 'Degree',
-      dir: 'test/polynomials',
-      params: [4],
+
+  [
+    [4,2,0,3],
+    [0,0,0],
+    [4,2,0,0],
+  ].forEach((poly, index) => {
+    it(`should calculate the degree of a polynomial #${index}`, async () => {
+      const ref = degree(poly);
+      const circuit = await circomkit.WitnessTester('degree', {
+        file: 'polynomials',
+        template: 'Degree',
+        dir: 'test/polynomials',
+        params: [poly.length],
+      });
+      await circuit.expectPass(
+        { coeff: poly },
+        { out: ref === -1 ? SNARK_FIELD_SIZE - 1n : ref }
+      );
     });
-    await circuit.expectPass({ coeff: poly }, { out: ref });
   });
 
-  it('should calculate the degree of a zero polynomial', async () => {
-    const poly = [0,0,0,0];
-    const circuit = await circomkit.WitnessTester('degree', {
-      file: 'polynomials',
-      template: 'Degree',
-      dir: 'test/polynomials',
-      params: [4],
-    });
-    await circuit.expectPass({ coeff: poly }, { out: SNARK_FIELD_SIZE - 1n });
-  });
 });
