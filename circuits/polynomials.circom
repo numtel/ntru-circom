@@ -19,3 +19,37 @@ template Degree(N) {
   out <== buffer - 1;
 }
 
+// From https://web.archive.org/web/20221224004650/https://docs.electronlabs.org/reference/intro-to-circom#how-to-use-the-modulo-operator--in-circom
+template Modulus(p, n) {
+  signal input x;
+  signal q;
+  signal output y;
+
+  y <-- x%p;
+  q <-- x\p; //where '\' is the integer division operator
+  x === q*p + y; //this works!
+  component ltP = LessThan(n);
+  ltP.in[0] <== p;
+  ltP.in[1] <== y;
+  ltP.out === 0;
+}
+
+// p: divisor
+// n: number of bits in p
+template ModInverse(p, n) {
+  signal input a;
+  signal output out;
+
+  var aP = Modulus(p, n)(a);
+  var aPP = Modulus(p, n)(aP + p);
+  var buffer = 0;
+  for (var x = 1; x < p; x++) {
+    var aPPxP = Modulus(p, n)(aPP * x);
+    var valIsOne = IsZero()(aPPxP - 1);
+    var bufferIsNull = IsZero()(buffer);
+    var newVal = IfElse()(valIsOne, x, 0);
+    var bufferAdd = IfElse()(bufferIsNull, newVal, 0);
+    buffer = buffer + bufferAdd;
+  }
+  out <== buffer;
+}
