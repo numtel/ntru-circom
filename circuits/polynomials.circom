@@ -60,8 +60,35 @@ template AddPolynomials(p, np, N) {
   signal output out[N];
 
   for (var i = 0; i < N; i++) {
-    var abP = Modulus(p, np)(a[i] + b[i]);
-    var abPP = Modulus(p, np)(abP + p);
-    out[i] <== abPP;
+    var abP = Modulus(p, np)(a[i] + b[i] + p);
+    out[i] <== abP;
   }
 }
+
+template SubtractPolynomials(p, np, N) {
+  signal input a[N];
+  signal input b[N];
+  signal output out[N];
+
+  for (var i = 0; i < N; i++) {
+    var abP = Modulus(p, np)(a[i] - b[i] + p);
+    out[i] <== abP;
+  }
+}
+
+template MultiplyPolynomials(p, np, Na, Nb) {
+  signal input a[Na];
+  signal input b[Nb];
+  signal output out[Na + Nb - 1];
+
+  var buffer[Na + Nb - 1];
+  for (var i = 0; i < Na; i++) {
+    for (var j = 0; j < Nb; j++) {
+      buffer[i + j] = Modulus(p, np)(buffer[i+j] + a[i] * b[j]);
+    }
+  }
+  for (var k = 0; k < Na + Nb - 1; k++) {
+    out[k] <== buffer[k];
+  }
+}
+
