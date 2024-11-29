@@ -92,3 +92,34 @@ template MultiplyPolynomials(p, np, Na, Nb) {
   }
 }
 
+// Instead of doing all the work of calculating the division of the polynomials,
+// just verify the calculation using multiplication
+template VerifyDividePolynomials(p, np, Na, Nb) {
+  signal input a[Na]; // dividend
+  signal input b[Nb]; // divisor
+  signal input quotient[Na];
+  signal input remainder[Na];
+
+  var newSize = Na + Nb - 1;
+  var product[newSize] = MultiplyPolynomials(p, np, Nb, Na)(b, quotient);
+  for(var i = 0; i<Na; i++) {
+    product[i] = Modulus(p, np)(product[i] + remainder[i]);
+  }
+
+  // product + remainder = dividend
+  component eq[Na];
+  for(var i = 0; i<Na; i++) {
+    eq[i] = IsEqual();
+    eq[i].in[0] <== a[i];
+    eq[i].in[1] <== product[i];
+    eq[i].out === 1;
+  }
+
+  // Any trailing coefficients of the product are zero
+  component isz[newSize - Na];
+  for(var i = Na; i<newSize; i++) {
+    isz[i-Na] = IsZero();
+    isz[i-Na].in <== product[i];
+    isz[i-Na].out === 1;
+  }
+}

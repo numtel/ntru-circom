@@ -8,6 +8,7 @@ import {
   addPolynomials,
   subtractPolynomials,
   multiplyPolynomials,
+  dividePolynomials,
 } from '../index.js';
 
 const SNARK_FIELD_SIZE = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001n;
@@ -125,7 +126,7 @@ describe('circom implementation', () => {
         params: [
           ...params.slice(0, 2),
           polys[0].length,
-          polys[0].length,
+          polys[1].length,
         ],
       });
       const ref = multiplyPolynomials(polys[0], polys[1], p);
@@ -134,7 +135,47 @@ describe('circom implementation', () => {
         { out: ref }
       );
     });
+
+    it(`should verify the division of the polynomials #${index}`, async () => {
+      const circuit = await circomkit.WitnessTester(`divpoly${index}`, {
+        file: 'polynomials',
+        template: 'VerifyDividePolynomials',
+        dir: 'test/polynomials',
+        params: [
+          ...params.slice(0, 2),
+          polys[0].length,
+          polys[1].length,
+        ],
+      });
+
+      let ref;
+      try {
+        ref = dividePolynomials(polys[0], polys[1], p);
+      } catch(error) {
+        // unable to divide
+        // proof should fail with invalid quotient, remainder
+        await circuit.expectFail({
+          a: polys[0],
+          b: polys[1],
+          quotient: polys[0],
+          remainder: polys[1],
+        });
+        return;
+      }
+
+      // Test case inputs may be outside the modulus, fix them first
+      const poly0Fixed = addPolynomials(polys[0], [], p);
+      const poly1Fixed = addPolynomials(polys[1], [], p);
+      await circuit.expectPass({
+        a: expandArray(poly0Fixed, polys[0].length, 0),
+        b: expandArray(poly1Fixed, polys[1].length, 0),
+        quotient: expandArray(ref.quotient, polys[0].length, 0),
+        remainder: expandArray(ref.remainder, polys[0].length, 0),
+      });
+    });
   });
-
-
 });
+
+function expandArray(arr, len, fill) {
+  return [...arr, ...Array(len - arr.length).fill(fill)];
+}
