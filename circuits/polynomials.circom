@@ -28,10 +28,11 @@ template Modulus(p, n) {
   y <-- x%p;
   q <-- x\p; //where '\' is the integer division operator
   x === q*p + y; //this works!
-  component ltP = LessThan(n);
-  ltP.in[0] <== p;
-  ltP.in[1] <== y;
-  ltP.out === 0;
+  // XXX: this final step is not necessary, adds a lot of constraints
+//   component ltP = LessThan(n);
+//   ltP.in[0] <== p;
+//   ltP.in[1] <== y;
+//   ltP.out === 0;
 }
 
 // p: divisor
@@ -123,3 +124,25 @@ template VerifyDividePolynomials(p, np, Na, Nb) {
     isz[i-Na].out === 1;
   }
 }
+
+template VerifyEncrypt(q, nq, N) {
+  signal input r[N];
+  // TODO could m be length newSize instead of N?
+  signal input m[N];
+  signal input h[N];
+  var newSize = N + N - 1;
+  signal input quotient[newSize];
+  signal input remainder[newSize];
+
+  // TODO could this be more efficient?
+  var rhq[newSize] = MultiplyPolynomials(q, nq, N, N)(r, h);
+  for(var i = 0; i<N; i++) {
+    rhq[i] = Modulus(q, nq)(rhq[i] + m[i]);
+  }
+
+  var I[N+1];
+  I[0] = 1;
+  I[N] = q-1;
+  VerifyDividePolynomials(q, nq, newSize, N+1)(rhq, I, quotient, remainder);
+}
+

@@ -59,15 +59,15 @@ export default class NTRU {
     this.h = genH(this.p, this.q, this.fq, this.g, this.I);
   }
   encryptStr(inputPlain) {
-    const r = generateCustomArray(this.N, this.dr, this.dr);
+    const r = generateCustomArray(this.N, this.dr, this.dr).map(x=>x=== -1 ? 2: x);
     // Max N bits since there's no provision to split into words
-    const m = stringToBits(inputPlain).reverse();
+    const m = stringToBits(inputPlain);
     const encrypted = encrypt(r, m, this.h, this.q, this.I);
     return encrypted;
   }
   decryptStr(encrypted) {
     const decrypted = decrypt(this.f, encrypted, this.I, this.q, this.p, this.fp);
-    const plaintext = bitsToString(expandArrayToMultiple(decrypted, 8).reverse());
+    const plaintext = bitsToString(expandArrayToMultiple(decrypted, 8));
     return plaintext;
   }
 }
@@ -194,7 +194,7 @@ export function multiplyPolynomialsByScalar(poly, scalar, p) {
 //                    = (x^2 + 2x + 3)*(2x^2 - 1) + 1
 //                    = 1 mod q
 // 
-export function extendedEuclideanAlgorithm(a, b, p) {
+function extendedEuclideanAlgorithm(a, b, p) {
   let r0 = a.slice();
   let r1 = b.slice();
   let s0 = [1];
@@ -230,13 +230,13 @@ export function extendedEuclideanAlgorithm(a, b, p) {
   };
 }
 
-function generateCustomArray(length, numOnes, numNegOnes) {
+export function generateCustomArray(length, numOnes, numNegOnes) {
   if (numOnes + numNegOnes > length) {
     throw new Error("The total of 1s and -1s cannot exceed the array length.");
   }
 
   // Create an array filled with 0s
-  let array = new Array(length).fill(0);
+  const array = new Array(length).fill(0);
 
   // Add 1s to the array
   for (let i = 0; i < numOnes; i++) {
@@ -295,17 +295,17 @@ function genH(p, q, fq, g, I) {
   const pFq =  multiplyPolynomialsByScalar(fq, p, q).map(makeSigned(q)); // Multiply g by p modulo q
   const pFqG = multiplyPolynomials(pFq, g, q).map(makeSigned(q)); // Multiply and reduce modulo q
   const {remainder} = dividePolynomials(pFqG, I, q*2);
-  return trimPolynomial(remainder.map(makeSigned(q*2)));
+  return trimPolynomial(remainder);
 }
 
-function encrypt(r, m, h, q, I) {
+export function encrypt(r, m, h, q, I) {
   const rhq =  multiplyPolynomials(r, h, q).map(makeSigned(q));
   const rhqm = addPolynomials(m, rhq, q);
   const {remainder} = dividePolynomials(rhqm, I, q*2);
   return trimPolynomial(remainder);
 }
 
-function decrypt(f, e, I, q, p, fp) {
+export function decrypt(f, e, I, q, p, fp) {
   const a = multiplyPolynomials(f, e, q);
   const aDiv = dividePolynomials(a, I, q).remainder.map(makeSigned(q));
   const b = addPolynomials(aDiv, [], p).map(x => x === 2 ? -1 : x);

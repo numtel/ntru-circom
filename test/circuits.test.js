@@ -2,19 +2,22 @@ import { strictEqual } from 'node:assert';
 
 import { Circomkit } from 'circomkit';
 
-import {
+import NTRU, {
   degree,
   modInverse,
   addPolynomials,
   subtractPolynomials,
   multiplyPolynomials,
   dividePolynomials,
+  generateCustomArray,
+  encrypt,
+  decrypt,
 } from '../index.js';
 
 const SNARK_FIELD_SIZE = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001n;
 
 const circomkit = new Circomkit({
-  'verbose': false,
+  'verbose': !!process.env.VERBOSE,
   'inspect': true,
   'include': ['node_modules/circomlib/circuits'],
 });
@@ -173,6 +176,43 @@ describe('circom implementation', () => {
         remainder: expandArray(ref.remainder, polys[0].length, 0),
       });
     });
+  });
+
+  it('should verify an encryption', async () => {
+    const ntru = new NTRU;
+    ntru.generatePrivateKeyF();
+    ntru.generateNewPublicKeyGH();
+    // Transform negative values since the circuit doesn't handle them
+    const r = generateCustomArray(ntru.N, ntru.dr, ntru.dr).map(x=>x=== -1 ? 2 : x);
+    const m = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1];
+    const e = encrypt(r, m, ntru.h, ntru.q, ntru.I);
+
+    // Perform encryption step-by-step to build input signals
+    const rhq =  multiplyPolynomials(r, ntru.h, ntru.q);
+    const rhqm = addPolynomials(m, rhq, ntru.q);
+    const {quotient, remainder} = dividePolynomials(rhqm, ntru.I, ntru.q*2);
+    // Ensure steps returned the same encrypted value as the library function
+    strictEqual(JSON.stringify(e), JSON.stringify(remainder));
+
+    const circuit = await circomkit.WitnessTester(`encrypt`, {
+      file: 'polynomials',
+      template: 'VerifyEncrypt',
+      dir: 'test/polynomials',
+      params: [
+        ntru.q,
+        Math.ceil(Math.log2(ntru.q)) + 2, // + 2 just to be sure
+        ntru.N,
+      ],
+    });
+    const input = {
+      r,
+      m: expandArray(m, ntru.N, 0),
+      h: ntru.h,
+      // Transform values to be within the field
+      quotient: expandArray(quotient.map(x=>x%ntru.q), ntru.N + ntru.N - 1, 0),
+      remainder: expandArray(remainder, ntru.N + ntru.N - 1, 0),
+    };
+    await circuit.expectPass(input);
   });
 });
 
