@@ -4,21 +4,6 @@ include "comparators.circom";
 
 include "control-flow.circom";
 
-template Degree(N) {
-  signal input coeff[N];
-  signal output out;
-
-  var buffer = 0;
-  for(var i = N - 1; i >= 0; i--) {
-    var coeffIsZero = IsZero()(coeff[i]);
-    var bufferIsNull = IsZero()(buffer);
-    var newVal = IfElse()(coeffIsZero, 0, i + 1);
-    var bufferAdd = IfElse()(bufferIsNull, newVal, 0);
-    buffer = buffer + bufferAdd;
-  }
-  out <== buffer - 1;
-}
-
 // From https://web.archive.org/web/20221224004650/https://docs.electronlabs.org/reference/intro-to-circom#how-to-use-the-modulo-operator--in-circom
 template Modulus(p, n) {
   signal input x;
@@ -35,48 +20,6 @@ template Modulus(p, n) {
 //   ltP.out === 0;
 }
 
-// p: divisor
-// n: number of bits in p
-template ModInverse(p, n) {
-  signal input a;
-  signal output out;
-
-  var aP = Modulus(p, n)(a);
-  var aPP = Modulus(p, n)(aP + p);
-  var buffer = 0;
-  for (var x = 1; x < p; x++) {
-    var aPPxP = Modulus(p, n)(aPP * x);
-    var valIsOne = IsZero()(aPPxP - 1);
-    var bufferIsNull = IsZero()(buffer);
-    var newVal = IfElse()(valIsOne, x, 0);
-    var bufferAdd = IfElse()(bufferIsNull, newVal, 0);
-    buffer = buffer + bufferAdd;
-  }
-  out <== buffer;
-}
-
-template AddPolynomials(p, np, N) {
-  signal input a[N];
-  signal input b[N];
-  signal output out[N];
-
-  for (var i = 0; i < N; i++) {
-    var abP = Modulus(p, np)(a[i] + b[i] + p);
-    out[i] <== abP;
-  }
-}
-
-template SubtractPolynomials(p, np, N) {
-  signal input a[N];
-  signal input b[N];
-  signal output out[N];
-
-  for (var i = 0; i < N; i++) {
-    var abP = Modulus(p, np)(a[i] - b[i] + p);
-    out[i] <== abP;
-  }
-}
-
 template MultiplyPolynomials(p, np, Na, Nb) {
   signal input a[Na];
   signal input b[Nb];
@@ -88,6 +31,7 @@ template MultiplyPolynomials(p, np, Na, Nb) {
       buffer[i + j] = Modulus(p, np)(buffer[i+j] + a[i] * b[j]);
     }
   }
+  // TODO move the modulus to the end
   for (var k = 0; k < Na + Nb - 1; k++) {
     out[k] <== buffer[k];
   }
@@ -95,15 +39,15 @@ template MultiplyPolynomials(p, np, Na, Nb) {
 
 // Instead of doing all the work of calculating the division of the polynomials,
 // just verify the calculation using multiplication
-template VerifyDividePolynomials(p, np, Na, Nb) {
+template VerifyDividePolynomials(p, np, Na, Nb, Nqr) {
   signal input a[Na]; // dividend
   signal input b[Nb]; // divisor
-  signal input quotient[Na];
-  signal input remainder[Na];
+  signal input quotient[Nqr];
+  signal input remainder[Nqr];
 
-  var newSize = Na + Nb - 1;
-  var product[newSize] = MultiplyPolynomials(p, np, Nb, Na)(b, quotient);
-  for(var i = 0; i<Na; i++) {
+  var newSize = Nb + Nqr - 1;
+  var product[newSize] = MultiplyPolynomials(p, np, Nb, Nqr)(b, quotient);
+  for(var i = 0; i<Nqr; i++) {
     product[i] = Modulus(p, np)(product[i] + remainder[i]);
   }
 
@@ -127,12 +71,11 @@ template VerifyDividePolynomials(p, np, Na, Nb) {
 
 template VerifyEncrypt(q, nq, N) {
   signal input r[N];
-  // TODO could m be length newSize instead of N?
   signal input m[N];
   signal input h[N];
   var newSize = N + N - 1;
-  signal input quotient[newSize];
-  signal input remainder[newSize];
+  signal input quotient[N];
+  signal input remainder[N];
 
   // TODO could this be more efficient?
   var rhq[newSize] = MultiplyPolynomials(q, nq, N, N)(r, h);
@@ -143,6 +86,39 @@ template VerifyEncrypt(q, nq, N) {
   var I[N+1];
   I[0] = 1;
   I[N] = q-1;
-  VerifyDividePolynomials(q, nq, newSize, N+1)(rhq, I, quotient, remainder);
+  VerifyDividePolynomials(q, nq, newSize, N+1, N)(rhq, I, quotient, remainder);
 }
 
+// TODO need to check f matches fp?
+// this would be done by checking f,fp,h all together by encrypting a known value
+// and successfully decrypting it
+// is there an easy attack on that?
+template VerifyDecrypt(q, nq, p, np, N) {
+  signal input f[N];
+  signal input fp[N];
+  signal input e[N];
+  var newSize = N + N - 1;
+  signal input quotient1[N];
+  signal input remainder1[N];
+  signal input quotient2[N];
+  signal input remainder2[N];
+
+  var a[newSize] = MultiplyPolynomials(q, nq, N, N)(f, e);
+
+  var I[N+1];
+  I[0] = 1;
+  I[N] = q-1;
+  VerifyDividePolynomials(q, nq, newSize, N+1, N)(a, I, quotient1, remainder1);
+
+  var b[N];
+  for(var i = 0; i < N; i++) {
+    var gt = LessThan(nq)([ q/2, remainder1[i] ]);
+    b[i] = Modulus(p, np)(remainder1[i] + gt);
+  }
+
+  var c[newSize] = MultiplyPolynomials(p, np, N, N)(fp, b);
+
+  I[N] = p-1;
+  VerifyDividePolynomials(p, np, newSize, N+1, N)(c, I, quotient2, remainder2);
+
+}

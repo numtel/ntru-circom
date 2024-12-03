@@ -59,7 +59,7 @@ export default class NTRU {
     this.h = genH(this.p, this.q, this.fq, this.g, this.I);
   }
   encryptStr(inputPlain) {
-    const r = generateCustomArray(this.N, this.dr, this.dr).map(x=>x=== -1 ? 2: x);
+    const r = generateCustomArray(this.N, this.dr, this.dr);
     // Max N bits since there's no provision to split into words
     const m = stringToBits(inputPlain);
     const encrypted = encrypt(r, m, this.h, this.q, this.I);
@@ -127,10 +127,10 @@ export function multiplyPolynomials(a, b, p) {
   const result = new Array(a.length + b.length - 1).fill(0);
   for (let i = 0; i < a.length; i++) {
     for (let j = 0; j < b.length; j++) {
-      result[i + j] = (result[i + j] + a[i] * b[j]) % p;
+      result[i + j] = result[i + j] + a[i] * b[j];
     }
   }
-  return trimPolynomial(result);
+  return trimPolynomial(result.map(x=> x % p));
 }
 
 // Function to divide two polynomials modulo p
@@ -283,36 +283,29 @@ function polyInv(polyIn, polyI, polyMod) {
   }
 }
 
-function makeSigned(prime) {
-  return (val) => {
-    val = val % prime;
-    return Math.abs(val) > prime/2 ? val < 0 ? val + prime : val - prime : val;
-  };
-}
-
 // Generate public key
 function genH(p, q, fq, g, I) {
-  const pFq =  multiplyPolynomialsByScalar(fq, p, q).map(makeSigned(q)); // Multiply g by p modulo q
-  const pFqG = multiplyPolynomials(pFq, g, q).map(makeSigned(q)); // Multiply and reduce modulo q
-  const {remainder} = dividePolynomials(pFqG, I, q*2);
+  const pFq =  multiplyPolynomialsByScalar(fq, p, q);
+  const pFqG = multiplyPolynomials(pFq, g, q);
+  const {remainder} = dividePolynomials(pFqG, I, q);
   return trimPolynomial(remainder);
 }
 
 export function encrypt(r, m, h, q, I) {
-  const rhq =  multiplyPolynomials(r, h, q).map(makeSigned(q));
+  const rhq =  multiplyPolynomials(r, h, q);
   const rhqm = addPolynomials(m, rhq, q);
-  const {remainder} = dividePolynomials(rhqm, I, q*2);
+  const {remainder} = dividePolynomials(rhqm, I, q);
   return trimPolynomial(remainder);
 }
 
 export function decrypt(f, e, I, q, p, fp) {
   const a = multiplyPolynomials(f, e, q);
-  const aDiv = dividePolynomials(a, I, q).remainder.map(makeSigned(q));
-  const b = addPolynomials(aDiv, [], p).map(x => x === 2 ? -1 : x);
-  const c = multiplyPolynomials(fp, b, p);
+  // This 'off-by-one' somehow fixes the value so it can calculate in circom
+  // the same way without needing to use negative numbers
+  const aDiv = dividePolynomials(a, I, q).remainder.map(x => (x > q/2 ? x + 1 : x) % p);
+  const c = multiplyPolynomials(fp, aDiv, p);
   const cDiv = dividePolynomials(c, I, p);
-  const cVal = cDiv.remainder.map(makeSigned(p));
-  return trimPolynomial(cVal);
+  return trimPolynomial(cDiv.remainder);
 }
 
 function expandArrayToMultiple(array, multiple) {
