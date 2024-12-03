@@ -5,8 +5,8 @@ NTRU (post-quantum asymmetric lattice) encryption in Javascript and Circom
 ## WIP
 
 * [x] Javascript implementation
-* [ ] circom implementation
-* [ ] make it work with n=701, q=8192
+* [x] circom implementation
+* [x] test it with n=701, q=8192
 
 ## Installation
 
@@ -17,6 +17,10 @@ $ git clone https://github.com/numtel/ntru-circom.git
 $ cd ntru-circom
 $ npm install
 $ npm test
+
+# Run large tests and output circom compilation details
+$ GO_LARGE=1 VERBOSE=1 npm test -- -f "decryption #1"
+$ GO_LARGE=1 VERBOSE=1 npm test -- -f "encryption #1"
 ```
 
 ## References

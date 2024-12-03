@@ -34,7 +34,8 @@ export default class NTRU {
   }
   // Generate a new private key
   generatePrivateKeyF() {
-    const maxTries = 100;
+    // XXX: Large keys can take a long time to find an invertible f
+    const maxTries = 100000000;
     let i = 0;
     while(!(this.fq && this.fp) && i++ < maxTries) {
       try {
@@ -44,7 +45,6 @@ export default class NTRU {
       }
     }
     if(!this.fq || !this.fp) {
-      // This should never happen with 100 tries
       throw new Error('Could not find invertible f');
     }
   }
