@@ -29,9 +29,9 @@ describe('circom implementation', () => {
     ];
     it(`should calculate the modulus of ${p}`, async () => {
       const circuit = await circomkit.WitnessTester(`modulus${p}`, {
-        file: 'polynomials',
+        file: 'ntru',
         template: 'Modulus',
-        dir: 'test/polynomials',
+        dir: 'test/ntru',
         params,
       });
       for(let i = 0; i < p*3; i++) {
@@ -61,9 +61,9 @@ describe('circom implementation', () => {
 
     it(`should calculate the multiplication of the polynomials #${index}`, async () => {
       const circuit = await circomkit.WitnessTester(`mulpoly${index}`, {
-        file: 'polynomials',
+        file: 'ntru',
         template: 'MultiplyPolynomials',
-        dir: 'test/polynomials',
+        dir: 'test/ntru',
         params,
       });
       const ref = multiplyPolynomials(polys[0], polys[1], p);
@@ -75,9 +75,9 @@ describe('circom implementation', () => {
 
     it(`should verify the division of the polynomials #${index}`, async () => {
       const circuit = await circomkit.WitnessTester(`divpoly${index}`, {
-        file: 'polynomials',
+        file: 'ntru',
         template: 'VerifyDividePolynomials',
-        dir: 'test/polynomials',
+        dir: 'test/ntru',
         params: [
           ...params,
           polys[0].length,
@@ -128,9 +128,9 @@ describe('circom implementation', () => {
     deepStrictEqual(e, remainder);
 
     const circuit = await circomkit.WitnessTester(`encrypt`, {
-      file: 'polynomials',
+      file: 'ntru',
       template: 'VerifyEncrypt',
-      dir: 'test/polynomials',
+      dir: 'test/ntru',
       params: [
         ntru.q,
         Math.ceil(Math.log2(ntru.q)) + 2, // + 2 just to be sure
@@ -170,9 +170,9 @@ describe('circom implementation', () => {
     deepStrictEqual(d.map(x=>x=== -1 ? 2 : x), cDiv.remainder);
 
     const circuit = await circomkit.WitnessTester(`decrypt`, {
-      file: 'polynomials',
+      file: 'ntru',
       template: 'VerifyDecrypt',
-      dir: 'test/polynomials',
+      dir: 'test/ntru',
       params: [
         ntru.q,
         Math.ceil(Math.log2(ntru.q)) + 2, // + 2 just to be sure
@@ -192,6 +192,13 @@ describe('circom implementation', () => {
       remainder2: expandArray(cDiv.remainder, ntru.N, 0),
     };
     await circuit.expectPass(input);
+    const input2 = {
+      ...input,
+      remainder2: expandArray(cDiv.remainder, ntru.N, 0)
+        // modify the remainder very slightly
+        .map((x, i) => i === 0 ? x + 1 : x),
+    };
+    await circuit.expectFail(input2);
   });
 });
 

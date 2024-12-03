@@ -2,8 +2,6 @@ pragma circom 2.1.0;
 
 include "comparators.circom";
 
-include "control-flow.circom";
-
 // From https://web.archive.org/web/20221224004650/https://docs.electronlabs.org/reference/intro-to-circom#how-to-use-the-modulo-operator--in-circom
 template Modulus(p, n) {
   signal input x;
