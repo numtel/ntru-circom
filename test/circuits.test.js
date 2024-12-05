@@ -21,6 +21,47 @@ const circomkit = new Circomkit({
 
 describe('circom implementation', () => {
 
+  [
+    [[1,4],[0,3], 7],
+    [[1,2,3],[4,3,2], 7],
+    [[1,2,3,4],[5,4,3,2], 11],
+    [[1,2,3,4,5],[6,5,4,3,2], 13],
+    [[1,2,3,4,5,0],[7,6,5,4,3,2], 13],
+  ].forEach((polys, index) => {
+    it(`polynomial multiply #${index}`, async () => {
+      const circuit = await circomkit.WitnessTester(`mul${index}`, {
+        file: 'ntru',
+        template: 'MultiplyPolynomials',
+        dir: 'test/ntru',
+        params: [polys[0].length],
+      });
+      const input = { a: polys[0], b: polys[1] };
+      const result = multiplyPolynomials(input.a, input.b, Math.pow(2,20));
+      await circuit.expectPass(input, { result });
+      process.env.VERBOSE && console.log((await circuit.parseConstraints()).join('\n'));
+    });
+
+    it(`polynomial modular multiply #${index}`, async () => {
+      const p = polys[2];
+
+      const circuit = await circomkit.WitnessTester(`mulmod${index}`, {
+        file: 'ntru',
+        template: 'MultiplyPolynomialsMod',
+        dir: 'test/ntru',
+        params: [
+          polys[0].length,
+          p,
+          // largest product coefficient fits inside an integer of n bits:
+          Math.ceil(Math.log2(100)) + 2, // + 2 just to be sure
+        ],
+      });
+      const input = { a: polys[0], b: polys[1] };
+      const result = multiplyPolynomials(input.a, input.b, p);
+      await circuit.expectPass(input, { result });
+      process.env.VERBOSE && console.log((await circuit.parseConstraints()).join('\n'));
+    });
+  });
+
   [ 3, 128 ].forEach(p => {
     const params = [
       p,
@@ -39,7 +80,21 @@ describe('circom implementation', () => {
           { x: i },
           { y: i % p }
         );
+
+        const witness = await circuit.calculateWitness({x:i});
+        await circuit.expectConstraintPass(witness);
+
+        const badWitness = await circuit.editWitness(witness, {
+          'main.x': (i) + 1,
+        });
+        await circuit.expectConstraintFail(badWitness);
+
+        const badWitness2 = await circuit.editWitness(witness, {
+          'main.x': (i) - 1,
+        });
+        await circuit.expectConstraintFail(badWitness2);
       }
+      process.env.VERBOSE && console.log((await circuit.parseConstraints()).join('\n'));
     });
   });
 
@@ -53,27 +108,29 @@ describe('circom implementation', () => {
     const p = polys[2];
     const params = [
       p,
-      // p fits inside an integer of n bits:
-      Math.ceil(Math.log2(p)) + 2, // + 2 just to be sure
-      polys[0].length,
-      polys[1].length,
+      // largest product coefficent before modulus fits inside an integer of n bits:
+      Math.ceil(Math.log2(100000)) + 2, // + 2 just to be sure
     ];
 
-    it(`should calculate the multiplication of the polynomials #${index}`, async () => {
+    it(`should calculate the polynomial multiplication #${index}`, async () => {
       const circuit = await circomkit.WitnessTester(`mulpoly${index}`, {
         file: 'ntru',
-        template: 'MultiplyPolynomials',
+        template: 'MultiplyPolynomialsMod',
         dir: 'test/ntru',
-        params,
+        params: [
+          polys[0].length,
+          ...params,
+        ],
       });
       const ref = multiplyPolynomials(polys[0], polys[1], p);
       await circuit.expectPass(
         { a: polys[0], b: polys[1] },
-        { out: ref }
+        { result: ref }
       );
+      process.env.VERBOSE && console.log((await circuit.parseConstraints()).join('\n'));
     });
 
-    it(`should verify the division of the polynomials #${index}`, async () => {
+    it(`should verify the polynomial division #${index}`, async () => {
       const circuit = await circomkit.WitnessTester(`divpoly${index}`, {
         file: 'ntru',
         template: 'VerifyDividePolynomials',
@@ -81,6 +138,7 @@ describe('circom implementation', () => {
         params: [
           ...params,
           polys[0].length,
+          polys[1].length,
         ],
       });
 
@@ -108,6 +166,7 @@ describe('circom implementation', () => {
         quotient: expandArray(ref.quotient, polys[0].length, 0),
         remainder: expandArray(ref.remainder, polys[0].length, 0),
       });
+      process.env.VERBOSE && console.log((await circuit.parseConstraints()).join('\n'));
     });
   });
 
@@ -125,9 +184,8 @@ describe('circom implementation', () => {
       }
     },
   ].forEach((profile, index) => {
-    if(profile.confirm && !profile.confirm()) return;
-
     it(`should verify an encryption #${index}`, async () => {
+      if(profile.confirm && !profile.confirm()) return;
       const ntru = new NTRU(profile);
       ntru.generatePrivateKeyF();
       ntru.generateNewPublicKeyGH();
@@ -149,7 +207,7 @@ describe('circom implementation', () => {
         dir: 'test/ntru',
         params: [
           ntru.q,
-          Math.ceil(Math.log2(ntru.q)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(100000)) + 2, // + 2 just to be sure
           ntru.N,
         ],
       });
@@ -158,13 +216,14 @@ describe('circom implementation', () => {
         m: expandArray(m, ntru.N, 0),
         h: ntru.h,
         // Transform values to be within the field
-        quotient: expandArray(quotient.map(x=>x%ntru.q), ntru.N, 0),
-        remainder: expandArray(remainder, ntru.N, 0),
+        quotient: expandArray(quotient.map(x=>x%ntru.q), ntru.N+1, 0),
+        remainder: expandArray(remainder, ntru.N+1, 0),
       };
       await circuit.expectPass(input);
     });
 
     it(`should verify a decryption #${index}`, async () => {
+      if(profile.confirm && !profile.confirm()) return;
       const ntru = new NTRU(profile);
       ntru.generatePrivateKeyF();
       ntru.generateNewPublicKeyGH();
@@ -202,10 +261,10 @@ describe('circom implementation', () => {
         fp: expandArray(ntru.fp, ntru.N, 0),
         e: expandArray(e, ntru.N, 0),
         // Transform values to be within the field
-        quotient1: expandArray(aDiv.quotient, ntru.N, 0),
-        remainder1: expandArray(aDiv.remainder, ntru.N, 0),
-        quotient2: expandArray(cDiv.quotient, ntru.N, 0),
-        remainder2: expandArray(cDiv.remainder, ntru.N, 0),
+        quotient1: expandArray(aDiv.quotient, ntru.N + 1, 0),
+        remainder1: expandArray(aDiv.remainder, ntru.N + 1, 0),
+        quotient2: expandArray(cDiv.quotient, ntru.N + 1, 0),
+        remainder2: expandArray(cDiv.remainder, ntru.N + 1, 0),
       };
       await circuit.expectPass(input);
       const input2 = {

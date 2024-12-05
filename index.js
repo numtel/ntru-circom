@@ -55,7 +55,7 @@ export default class NTRU {
   // Generate a public key given a specific generation secret
   generatePublicKeyH(gArr) {
     if(!this.f) throw new Error('missing private key F');
-    this.g = generateCustomArray(this.N, this.dg, this.dg);
+    this.g = gArr;
     this.h = genH(this.p, this.q, this.fq, this.g, this.I);
   }
   encryptStr(inputPlain) {
