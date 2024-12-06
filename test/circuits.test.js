@@ -53,7 +53,7 @@ describe('circom implementation', () => {
           polys[0].length,
           p,
           // largest product coefficient fits inside an integer of n bits:
-          Math.ceil(Math.log2(100)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(100)),
         ],
       });
       const input = { a: polys[0], b: polys[1] };
@@ -66,8 +66,8 @@ describe('circom implementation', () => {
   [ 3, 128 ].forEach(p => {
     const params = [
       p,
-      // p fits inside an integer of n bits:
-      Math.ceil(Math.log2(p)) + 2 // + 2 just to be sure
+      // x fits inside an integer of n bits:
+      Math.ceil(Math.log2(p * 3)),
     ];
     it(`should calculate the modulus of ${p}`, async () => {
       const circuit = await circomkit.WitnessTester(`modulus${p}`, {
@@ -110,7 +110,7 @@ describe('circom implementation', () => {
     const params = [
       p,
       // largest product coefficent before modulus fits inside an integer of n bits:
-      Math.ceil(Math.log2(100000)) + 2, // + 2 just to be sure
+      Math.ceil(Math.log2(100000)),
     ];
 
     it(`should calculate the polynomial multiplication #${index}`, async () => {
@@ -226,7 +226,7 @@ describe('circom implementation', () => {
         dir: 'test/ntru',
         params: [
           ntru.q,
-          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(1_000_000)),
           ntru.N,
         ],
       });
@@ -270,9 +270,15 @@ describe('circom implementation', () => {
         dir: 'test/ntru',
         params: [
           ntru.q,
-          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
+          // This value is correlated with ntru.N and ntru.df.
+          // With more non-zero coefficients in the private key,
+          // intermediary coefficient products before applying the modulus
+          // can be quite large.
+          // TODO figure out a method for calculating this value
+          // Because this isn't enough for GO_LARGE=1
+          Math.ceil(Math.log2(1_000_000)),
           ntru.p,
-          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(10000)),
           ntru.N,
         ],
       });
@@ -332,9 +338,9 @@ describe('circom implementation', () => {
         dir: 'test/ntru',
         params: [
           ntru.q,
-          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(1_000_000)),
           ntru.p,
-          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(10000)),
           ntru.N,
         ],
       });
