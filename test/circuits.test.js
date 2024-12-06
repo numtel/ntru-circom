@@ -38,6 +38,7 @@ describe('circom implementation', () => {
       const input = { a: polys[0], b: polys[1] };
       const result = multiplyPolynomials(input.a, input.b, Math.pow(2,20));
       await circuit.expectPass(input, { result });
+      await circuit.expectConstraintCount(polys[0].length ** 2, true);
       process.env.VERBOSE && console.log((await circuit.parseConstraints()).join('\n'));
     });
 
