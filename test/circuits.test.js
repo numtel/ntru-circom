@@ -208,14 +208,14 @@ describe('circom implementation', () => {
         dir: 'test/ntru',
         params: [
           ntru.q,
-          Math.ceil(Math.log2(100000)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
           ntru.N,
         ],
       });
       const input = {
         r,
         m: expandArray(m, ntru.N, 0),
-        h: ntru.h,
+        h: expandArray(ntru.h, ntru.N, 0),
         // Transform values to be within the field
         quotient: expandArray(quotient.map(x=>x%ntru.q), ntru.N+1, 0),
         remainder: expandArray(remainder, ntru.N+1, 0),
@@ -251,9 +251,9 @@ describe('circom implementation', () => {
         dir: 'test/ntru',
         params: [
           ntru.q,
-          Math.ceil(Math.log2(ntru.q)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
           ntru.p,
-          Math.ceil(Math.log2(ntru.p)) + 2, // + 2 just to be sure
+          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
           ntru.N,
         ],
       });

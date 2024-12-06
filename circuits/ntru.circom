@@ -156,10 +156,12 @@ template VerifyDividePolynomials(p, np, Na, Nb) {
   for(var i = 0; i<Nb; i++) {
     product[i] = Modulus(p, np)(product[i] + remainder[i]);
   }
+  for(var i = Nb; i<newSize; i++) {
+    product[i] = Modulus(p, np)(product[i]);
+  }
 
   // product + remainder = dividend
   component eq[Na];
-  // TODO this fails beyond i<167
   for(var i = 0; i<Na; i++) {
     eq[i] = IsEqual();
     eq[i].in[0] <== a[i];
