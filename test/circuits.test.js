@@ -250,9 +250,10 @@ describe('circom implementation', () => {
       const r = generateCustomArray(ntru.N, ntru.dr, ntru.dr).map(x=>x=== -1 ? 2 : x);
       const m = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1];
       const e = encrypt(r, m, ntru.h, ntru.q, ntru.I);
-      const f = ntru.f.map(x=>x=== -1 ? 2 : x);
+      const f = ntru.f.map(x=>x=== -1 ? ntru.q-1 : x);
 
       const d = decrypt(f, e, ntru.I, ntru.q, ntru.p, ntru.fp);
+      deepStrictEqual(d, m);
 
       // Perform decryption step-by-step to build input signals
       const a = multiplyPolynomials(f, e, ntru.q);
@@ -290,6 +291,75 @@ describe('circom implementation', () => {
         ...input,
         remainder2: expandArray(cDiv.remainder, ntru.N + 1, 0)
           // modify the remainder very slightly
+          .map((x, i) => i === 0 ? x + 1 : x),
+      };
+      await circuit.expectFail(input2);
+    });
+
+    it(`should verify encrypt/decrypt together #${index}`, async () => {
+      if(profile.confirm && !profile.confirm()) return;
+      const ntru = new NTRU(profile);
+      ntru.generatePrivateKeyF();
+      ntru.generateNewPublicKeyGH();
+      // Transform negative values since the circuit doesn't handle them
+      const r = generateCustomArray(ntru.N, ntru.dr, ntru.dr).map(x=>x=== -1 ? 2 : x);
+      const m = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1];
+      const e = encrypt(r, m, ntru.h, ntru.q, ntru.I);
+      const f = ntru.f.map(x=>x=== -1 ? ntru.q-1 : x);
+      //
+      // Perform encryption step-by-step to build input signals
+      const rhq =  multiplyPolynomials(r, ntru.h, ntru.q);
+      const rhqm = addPolynomials(m, rhq, ntru.q);
+      const {quotient, remainder} = dividePolynomials(rhqm, ntru.I, ntru.q);
+      // Ensure steps returned the same encrypted value as the library function
+      deepStrictEqual(e, remainder);
+
+      const d = decrypt(f, e, ntru.I, ntru.q, ntru.p, ntru.fp);
+      deepStrictEqual(d, m);
+
+      // Perform decryption step-by-step to build input signals
+      const a = multiplyPolynomials(f, e, ntru.q);
+      const aDiv = dividePolynomials(a, ntru.I, ntru.q);
+      const b = aDiv.remainder.map(x => x > ntru.q/2 ? (x+1)%ntru.p : x%ntru.p);
+      const c = multiplyPolynomials(ntru.fp, b, ntru.p, true);
+      const cDiv = dividePolynomials(c, ntru.I, ntru.p);
+      // Ensure steps returned the same decrypted value as the library function
+      deepStrictEqual(d.map(x=>x=== -1 ? 2 : x), cDiv.remainder);
+
+      const circuit = await circomkit.WitnessTester(`together`, {
+        file: 'ntru',
+        template: 'VerifyEncryptAndDecrypt',
+        dir: 'test/ntru',
+        params: [
+          ntru.q,
+          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
+          ntru.p,
+          Math.ceil(Math.log2(10000)) + 2, // + 2 just to be sure
+          ntru.N,
+        ],
+      });
+      const input = {
+        // Encryption signals
+        r,
+        m: expandArray(m, ntru.N, 0),
+        h: expandArray(ntru.h, ntru.N, 0),
+        // Transform values to be within the field
+        quotientE: expandArray(quotient.map(x=>x%ntru.q), ntru.N+1, 0),
+        remainderE: expandArray(remainder, ntru.N+1, 0),
+        // Decryption signals
+
+        f: expandArray(f, ntru.N, 0),
+        fp: expandArray(ntru.fp, ntru.N, 0),
+        // Transform values to be within the field
+        quotient1: expandArray(aDiv.quotient, ntru.N + 1, 0),
+        remainder1: expandArray(aDiv.remainder, ntru.N + 1, 0),
+        quotient2: expandArray(cDiv.quotient, ntru.N + 1, 0),
+      };
+      await circuit.expectPass(input);
+      const input2 = {
+        ...input,
+        quotient2: expandArray(cDiv.quotient, ntru.N + 1, 0)
+          // modify the quotient very slightly
           .map((x, i) => i === 0 ? x + 1 : x),
       };
       await circuit.expectFail(input2);

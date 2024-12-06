@@ -63,8 +63,7 @@ export default class NTRU {
     return this.encryptBits(stringToBits(inputPlain));
   }
   decryptStr(encrypted) {
-    const plaintext = bitsToString(expandArrayToMultiple(this.decryptBits(encrypted), 8));
-    return plaintext;
+    return bitsToString(expandArrayToMultiple(this.decryptBits(encrypted), 8));
   }
   encryptBits(m) {
     const r = generateCustomArray(this.N, this.dr, this.dr);

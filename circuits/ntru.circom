@@ -200,10 +200,6 @@ template VerifyEncrypt(q, nq, N) {
   VerifyDividePolynomials(q, nq, newSize, N+1)(rhq, I, quotient, remainder);
 }
 
-// TODO need to check f matches fp?
-// this would be done by checking f,fp,h all together by encrypting a known value
-// and successfully decrypting it
-// is there an easy attack on that?
 template VerifyDecrypt(q, nq, p, np, N) {
   signal input f[N];
   signal input fp[N];
@@ -232,4 +228,38 @@ template VerifyDecrypt(q, nq, p, np, N) {
   I[N] = p-1;
   VerifyDividePolynomials(p, np, newSize, N+1)(c, I, quotient2, remainder2);
 
+}
+
+// Use to encrypt a value and ensure that the user also knows the private key
+template VerifyEncryptAndDecrypt(q, nq, p, np, N) {
+  // Encryption signals
+  signal input r[N]; // randomness
+  signal input m[N]; // plaintext
+  signal input h[N]; // pubkey
+  // All "+1" signals have 0 as the last value; it's just to match the I value
+  signal input quotientE[N+1]; // intermediate value
+  signal input remainderE[N+1]; // ciphertext
+
+  // Decryption signals
+  signal input f[N]; // privatekey
+  signal input fp[N]; // privatekey-ish
+  signal input quotient1[N+1]; // intermediate value
+  signal input remainder1[N+1]; // intermediate value
+  signal input quotient2[N+1]; // intermediate value
+
+  VerifyEncrypt(q, nq, N)(r, m, h, quotientE, remainderE);
+
+  component dec = VerifyDecrypt(q, nq, p, np, N);
+  dec.f <== f;
+  dec.fp <== fp;
+  for(var i = 0; i < N; i++) {
+    dec.e[i] <== remainderE[i];
+  }
+  dec.quotient1 <== quotient1;
+  dec.remainder1 <== remainder1;
+  dec.quotient2 <== quotient2;
+  for(var i = 0; i < N; i++) {
+    dec.remainder2[i] <== m[i];
+  }
+  dec.remainder2[N] <== 0;
 }
