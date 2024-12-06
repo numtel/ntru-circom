@@ -1,12 +1,10 @@
 # ntru-circom
 
+**This project has not been audited and should not be used in production.**
+
 NTRU (post-quantum asymmetric lattice) encryption in Javascript and Circom
 
-## WIP
-
-* [x] Javascript implementation
-* [x] circom implementation
-* [x] test it with n=701, q=8192
+Supports large keys and additive homomorphism
 
 ## Installation
 

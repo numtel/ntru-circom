@@ -59,16 +59,19 @@ export default class NTRU {
     this.h = genH(this.p, this.q, this.fq, this.g, this.I);
   }
   encryptStr(inputPlain) {
-    const r = generateCustomArray(this.N, this.dr, this.dr);
     // Max N bits since there's no provision to split into words
-    const m = stringToBits(inputPlain);
-    const encrypted = encrypt(r, m, this.h, this.q, this.I);
-    return encrypted;
+    return this.encryptBits(stringToBits(inputPlain));
   }
   decryptStr(encrypted) {
-    const decrypted = decrypt(this.f, encrypted, this.I, this.q, this.p, this.fp);
-    const plaintext = bitsToString(expandArrayToMultiple(decrypted, 8));
+    const plaintext = bitsToString(expandArrayToMultiple(this.decryptBits(encrypted), 8));
     return plaintext;
+  }
+  encryptBits(m) {
+    const r = generateCustomArray(this.N, this.dr, this.dr);
+    return encrypt(r, m, this.h, this.q, this.I);
+  }
+  decryptBits(e) {
+    return decrypt(this.f, e, this.I, this.q, this.p, this.fp);
   }
 }
 

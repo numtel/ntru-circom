@@ -16,7 +16,7 @@ const SNARK_FIELD_SIZE = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f
 const circomkit = new Circomkit({
   'verbose': !!process.env.VERBOSE,
   'inspect': true,
-  'include': ['node_modules/circomlib/circuits'],
+  'include': ['node_modules'],
 });
 
 describe('circom implementation', () => {
@@ -288,7 +288,7 @@ describe('circom implementation', () => {
       await circuit.expectPass(input);
       const input2 = {
         ...input,
-        remainder2: expandArray(cDiv.remainder, ntru.N, 0)
+        remainder2: expandArray(cDiv.remainder, ntru.N + 1, 0)
           // modify the remainder very slightly
           .map((x, i) => i === 0 ? x + 1 : x),
       };

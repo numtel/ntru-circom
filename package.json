@@ -5,6 +5,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "todo": "bash -c \"grep -rn 'TODO' --exclude-dir={node_modules,build,cache,lib,out} --exclude={*.min*,*.swp,package.json,solc} *\"",
     "test": "npx --node-options='--max-old-space-size=16240' mocha --timeout 900000"
   },
   "repository": {

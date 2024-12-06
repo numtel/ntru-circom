@@ -1,6 +1,6 @@
 pragma circom 2.1.0;
 
-include "comparators.circom";
+include "circomlib/circuits/comparators.circom";
 
 // From https://pps-lab.com/blog/fhe_arithmetization/
 template Modulus(p, n) {
