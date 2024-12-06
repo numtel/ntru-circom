@@ -172,13 +172,30 @@ describe('circom implementation', () => {
   });
 
   [
-    {}, // default settings
+    {
+      // very small keys, not secure, but fast
+      N: 17,
+      q: 32,
+      df: 3,
+      dg: 2,
+      dr: 2,
+    },
     {
       N: 701,
       q: 8192,
       confirm: () => {
         if(!process.env.GO_LARGE) {
           console.log('      Set GO_LARGE=1 env var to run this test case, it is big!');
+          return false;
+        }
+        return true;
+      }
+    },
+    {
+      // default settings
+      confirm: () => {
+        if(!process.env.GO_167) {
+          console.log('      Set GO_167=1 env var to run this test case');
           return false;
         }
         return true;
@@ -192,6 +209,7 @@ describe('circom implementation', () => {
       ntru.generateNewPublicKeyGH();
       // Transform negative values since the circuit doesn't handle them
       const r = generateCustomArray(ntru.N, ntru.dr, ntru.dr).map(x=>x=== -1 ? 2 : x);
+      // m.length = 17 = smallest N in test case array
       const m = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1];
       const e = encrypt(r, m, ntru.h, ntru.q, ntru.I);
 
