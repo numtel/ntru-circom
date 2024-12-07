@@ -16,9 +16,15 @@ $ cd ntru-circom
 $ npm install
 $ npm test
 
+# Run medium-sized tests and output circom compilation details
+$ GO_167=1 VERBOSE=1 npm test -- -f "decryption #2"
+$ GO_167=1 VERBOSE=1 npm test -- -f "encryption #2"
+$ GO_167=1 VERBOSE=1 npm test -- -f "together #2"
+
 # Run large tests and output circom compilation details
 $ GO_LARGE=1 VERBOSE=1 npm test -- -f "decryption #1"
 $ GO_LARGE=1 VERBOSE=1 npm test -- -f "encryption #1"
+$ GO_LARGE=1 VERBOSE=1 npm test -- -f "together #1"
 ```
 
 ## References
@@ -29,4 +35,4 @@ $ GO_LARGE=1 VERBOSE=1 npm test -- -f "encryption #1"
 
 ## License
 
-MIT
+GPL-v3

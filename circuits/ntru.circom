@@ -23,78 +23,66 @@ template Modulus(p, n) {
   ltQ.out === 0;
 }
 
-// Imagine the coefficients are like trains passing in opposite directions
-// For example:
-//   n=4
-//   a=1,2,3,4 (4x^3 + 3x^2 + 2x + 1)
-//   b=6,5,4,3 (3x^3 + 4x^2 + 5x + 6)
-//
-// 4,3,2,1 --->
-//         <--- 6,5,4,3
-//
-// 4,3,2,1
-//       6,5,4,3
-//       ^ coeff #0 = 6*1
-//
-// 4,3,2,1
-//     6,5,4,3
-//     ^ ^ coeff #1 = 1*5 + 2*6
-//
-// 4,3,2,1
-//   6,5,4,3
-//   ^ ^ ^ coeff #2 = 1*4 + 2*5 + 3*6
-//
-// 4,3,2,1
-// 6,5,4,3
-// ^ ^ ^ ^ coeff #3 = 1*3 + 2*4 + 3*5 + 4*6
-//
-//   4,3,2,1
-// 6,5,4,3
-//   ^ ^ ^ coeff #4 = 2*3 + 3*4 + 4*5
-//
-//     4,3,2,1
-// 6,5,4,3
-//     ^ ^ coeff #5 = 3*3 + 4*4
-//
-//       4,3,2,1
-// 6,5,4,3
-//       ^ coeff #6 = 4*3
-//
-// Output: 6, 17, 32, 50, 38, 25, 12
-// (12x^6 + 25x^5 + 38x^4 + 50x^3 + 32x^2 + 17x + 6)
+/*
+From: https://github.com/yi-sun/circom-pairing/blob/master/circuits/bigint.circom#L227
+Polynomial Multiplication
+Inputs:
+    - a = a[0] + a[1] * X + ... + a[k-1] * X^{k-1}
+    - b = b[0] + b[1] * X + ... + b[k-1] * X^{k-1}
+Output:
+    - out = out[0] + out[1] * X + ... + out[2 * k - 2] * X^{2*k - 2}
+    - out = a * b as polynomials in X
+Notes:
+    - Optimization due to xJsnark:
+    -- witness is calculated by normal polynomial multiplication
+    -- out is contrained by evaluating out(X) === a(X) * b(X) at X = 0, ..., 2*k - 2
+    - If a[i], b[j] have absolute value < B, then out[i] has absolute value < k * B^2
+*/
+template MultiplyPolynomials(k) {
+   var k2 = 2 * k - 1;
+   signal input a[k];
+   signal input b[k];
+   signal output result[k2];
 
-template MultiplyPolynomials(n) {
-  var newSize = n + n - 1;
-  signal input a[n];
-  signal input b[n];
+   var prod_val[k2];
+   for (var i = 0; i < k2; i++) {
+       prod_val[i] = 0;
+       if (i < k) {
+           for (var a_idx = 0; a_idx <= i; a_idx++) {
+               prod_val[i] = prod_val[i] + a[a_idx] * b[i - a_idx];
+           }
+       } else {
+           for (var a_idx = i - k + 1; a_idx < k; a_idx++) {
+               prod_val[i] = prod_val[i] + a[a_idx] * b[i - a_idx];
+           }
+       }
+       result[i] <-- prod_val[i];
+   }
 
-  signal output result[newSize];
+   var pow[k2][k2]; // we cache the exponent values because it makes a big difference in witness generation time
+   for(var i = 0; i<k2; i++)for(var j=0; j<k2; j++)
+       pow[i][j] = i ** j;
 
-  // First and last coefficients are simple constraints
-  result[0] <== a[0] * b[0];
-  result[newSize-1] <== a[n-1] * b[n-1];
-
-  component sums[newSize - 2];
-  for(var k = 1; k < newSize - 1; k++) {
-    var sumSize = 2 * n - k - 1;
-    if(k < n) {
-      sumSize = k + 1;
-    }
-    sums[k-1] = Sum(sumSize);
-    for(var i = 0; i < sumSize; i++) {
-      var aIndex = k - n + 1 + i;
-      if(k < n) {
-        aIndex = i;
-      }
-      var bIndex = k - aIndex;
-      if(aIndex >= 0 && aIndex < n && bIndex >= 0 && bIndex < n) {
-        sums[k-1].in[i] <== a[aIndex] * b[bIndex];
-      }
-    }
-
-    result[k] <== sums[k-1].out;
-  }
+   var a_poly[k2];
+   var b_poly[k2];
+   var out_poly[k2];
+   for (var i = 0; i < k2; i++) {
+       out_poly[i] = 0;
+       a_poly[i] = 0;
+       b_poly[i] = 0;
+       for (var j = 0; j < k2; j++) {
+           out_poly[i] = out_poly[i] + result[j] * pow[i][j];
+       }
+       for (var j = 0; j < k; j++) {
+           a_poly[i] = a_poly[i] + a[j] * pow[i][j];
+           b_poly[i] = b_poly[i] + b[j] * pow[i][j];
+       }
+   }
+   for (var i = 0; i < k2; i++) {
+      out_poly[i] === a_poly[i] * b_poly[i];
+   }
 }
+
 
 template PolyMod(n, p, np) {
   signal input in[n];

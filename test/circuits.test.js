@@ -27,8 +27,21 @@ describe('circom implementation', () => {
     [[1,2,3,4],[5,4,3,2], 11],
     [[1,2,3,4,5],[6,5,4,3,2], 13],
     [[1,2,3,4,5,0],[7,6,5,4,3,2], 13],
+    [
+      [0,2,1,1,0,2,0,1,2,2,0,2,2,1,0,2,2,1,0,1,1,0,0,1,0,2,0,0,0,2,2,2,0,2,1,2,1,0,2,1,0,1,1,0,0,2,0,2,1,1,0,2,1,2,0,2,2,0,1,2,2,1,2,1,1,1,2,0,1,0,1,1,2,2,0,1,0,0,1,0,0,2,1,0,2,0,1,1,2,1,2,2,0,2,2,2,2,0,0,1,1,1,1,0,1,2,1,1,1,1,1,2,1,0,0,0,2,0,2,1,0,0,1,1,0,1,1,0,2,2,0,2,0,0,1,1,2,1,1,0,1,1,1,0,0,1,1,2,2,2,1,1,2,0,1,2,1,2,2,1,2,2,1,0,1,0,1],
+      [1,1,0,0,1,2,2,2,1,0,1,2,2,2,1,0,1,1,1,1,2,2,0,0,2,0,1,1,1,1,2,1,2,2,2,2,0,0,1,2,1,0,1,0,0,1,2,1,1,0,1,2,0,0,2,0,1,0,2,2,0,1,2,1,0,1,0,2,1,2,2,0,0,0,0,1,0,2,1,1,1,1,2,2,1,1,1,2,2,0,1,0,1,0,1,0,1,0,1,0,2,0,2,0,0,2,2,0,1,2,1,1,1,2,2,0,1,0,1,1,2,1,2,2,0,2,1,1,0,1,1,0,1,2,0,0,0,1,1,0,2,0,1,0,2,1,1,1,0,0,0,1,1,0,2,2,0,0,0,0,1,0,0,1,0,2,1],
+      100000,
+      () => {
+        if(!process.env.GO_167) {
+          console.log('      Set GO_167=1 env var to run this test case');
+          return false;
+        }
+        return true;
+      },
+    ],
   ].forEach((polys, index) => {
     it(`polynomial multiply #${index}`, async () => {
+      if(polys[3] && !polys[3]()) return;
       const circuit = await circomkit.WitnessTester(`mul${index}`, {
         file: 'ntru',
         template: 'MultiplyPolynomials',
@@ -38,11 +51,11 @@ describe('circom implementation', () => {
       const input = { a: polys[0], b: polys[1] };
       const result = multiplyPolynomials(input.a, input.b, Math.pow(2,20));
       await circuit.expectPass(input, { result });
-      await circuit.expectConstraintCount(polys[0].length ** 2, true);
       process.env.VERBOSE && console.log((await circuit.parseConstraints()).join('\n'));
     });
 
     it(`polynomial modular multiply #${index}`, async () => {
+      if(polys[3] && !polys[3]()) return;
       const p = polys[2];
 
       const circuit = await circomkit.WitnessTester(`mulmod${index}`, {
@@ -53,7 +66,7 @@ describe('circom implementation', () => {
           polys[0].length,
           p,
           // largest product coefficient fits inside an integer of n bits:
-          Math.ceil(Math.log2(100)),
+          Math.ceil(Math.log2(10000)),
         ],
       });
       const input = { a: polys[0], b: polys[1] };
@@ -264,6 +277,7 @@ describe('circom implementation', () => {
       // Ensure steps returned the same decrypted value as the library function
       deepStrictEqual(d.map(x=>x=== -1 ? 2 : x), cDiv.remainder);
 
+      process.env.VERBOSE && console.time('compile');
       const circuit = await circomkit.WitnessTester(`decrypt`, {
         file: 'ntru',
         template: 'VerifyDecrypt',
@@ -282,6 +296,7 @@ describe('circom implementation', () => {
           ntru.N,
         ],
       });
+      process.env.VERBOSE && console.timeEnd('compile');
       const input = {
         f: expandArray(f, ntru.N, 0),
         fp: expandArray(ntru.fp, ntru.N, 0),
@@ -292,7 +307,9 @@ describe('circom implementation', () => {
         quotient2: expandArray(cDiv.quotient, ntru.N + 1, 0),
         remainder2: expandArray(cDiv.remainder, ntru.N + 1, 0),
       };
+      process.env.VERBOSE && console.time('expectPass');
       await circuit.expectPass(input);
+      process.env.VERBOSE && console.timeEnd('expectPass');
       const input2 = {
         ...input,
         remainder2: expandArray(cDiv.remainder, ntru.N + 1, 0)
