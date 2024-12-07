@@ -202,6 +202,12 @@ describe('circom implementation', () => {
       }
     },
   ].forEach((profile, index) => {
+    function calcMaxNq(ntru) {
+      // Helper that estimates the maximum value before modulus
+      // This is a guess that should hopefully wildly overshoot the actually value
+      return ntru.N * ntru.N * ntru.q * ntru.df;
+    }
+
     it(`should verify an encryption #${index}`, async () => {
       if(profile.confirm && !profile.confirm()) return;
       const ntru = new NTRU(profile);
@@ -220,16 +226,18 @@ describe('circom implementation', () => {
       // Ensure steps returned the same encrypted value as the library function
       deepStrictEqual(e, remainder);
 
+      process.env.VERBOSE && console.time('compile');
       const circuit = await circomkit.WitnessTester(`encrypt`, {
         file: 'ntru',
         template: 'VerifyEncrypt',
         dir: 'test/ntru',
         params: [
           ntru.q,
-          Math.ceil(Math.log2(1_000_000)),
+          Math.ceil(Math.log2(calcMaxNq(ntru))),
           ntru.N,
         ],
       });
+      process.env.VERBOSE && console.timeEnd('compile');
       const input = {
         r,
         m: expandArray(m, ntru.N, 0),
@@ -238,7 +246,9 @@ describe('circom implementation', () => {
         quotient: expandArray(quotient.map(x=>x%ntru.q), ntru.N+1, 0),
         remainder: expandArray(remainder, ntru.N+1, 0),
       };
+      process.env.VERBOSE && console.time('expectPass');
       await circuit.expectPass(input);
+      process.env.VERBOSE && console.timeEnd('expectPass');
     });
 
     it(`should verify a decryption #${index}`, async () => {
@@ -264,24 +274,20 @@ describe('circom implementation', () => {
       // Ensure steps returned the same decrypted value as the library function
       deepStrictEqual(d.map(x=>x=== -1 ? 2 : x), cDiv.remainder);
 
+      process.env.VERBOSE && console.time('compile');
       const circuit = await circomkit.WitnessTester(`decrypt`, {
         file: 'ntru',
         template: 'VerifyDecrypt',
         dir: 'test/ntru',
         params: [
           ntru.q,
-          // This value is correlated with ntru.N and ntru.df.
-          // With more non-zero coefficients in the private key,
-          // intermediary coefficient products before applying the modulus
-          // can be quite large.
-          // TODO figure out a method for calculating this value
-          // Because this isn't enough for GO_LARGE=1
-          Math.ceil(Math.log2(1_000_000)),
+          Math.ceil(Math.log2(calcMaxNq(ntru))),
           ntru.p,
           Math.ceil(Math.log2(10000)),
           ntru.N,
         ],
       });
+      process.env.VERBOSE && console.timeEnd('compile');
       const input = {
         f: expandArray(f, ntru.N, 0),
         fp: expandArray(ntru.fp, ntru.N, 0),
@@ -292,7 +298,9 @@ describe('circom implementation', () => {
         quotient2: expandArray(cDiv.quotient, ntru.N + 1, 0),
         remainder2: expandArray(cDiv.remainder, ntru.N + 1, 0),
       };
+      process.env.VERBOSE && console.time('expectPass');
       await circuit.expectPass(input);
+      process.env.VERBOSE && console.timeEnd('expectPass');
       const input2 = {
         ...input,
         remainder2: expandArray(cDiv.remainder, ntru.N + 1, 0)
@@ -332,18 +340,20 @@ describe('circom implementation', () => {
       // Ensure steps returned the same decrypted value as the library function
       deepStrictEqual(d.map(x=>x=== -1 ? 2 : x), cDiv.remainder);
 
+      process.env.VERBOSE && console.time('compile');
       const circuit = await circomkit.WitnessTester(`together`, {
         file: 'ntru',
         template: 'VerifyEncryptAndDecrypt',
         dir: 'test/ntru',
         params: [
           ntru.q,
-          Math.ceil(Math.log2(1_000_000)),
+          Math.ceil(Math.log2(calcMaxNq(ntru))),
           ntru.p,
           Math.ceil(Math.log2(10000)),
           ntru.N,
         ],
       });
+      process.env.VERBOSE && console.timeEnd('compile');
       const input = {
         // Encryption signals
         r,
@@ -361,7 +371,9 @@ describe('circom implementation', () => {
         remainder1: expandArray(aDiv.remainder, ntru.N + 1, 0),
         quotient2: expandArray(cDiv.quotient, ntru.N + 1, 0),
       };
+      process.env.VERBOSE && console.time('expectPass');
       await circuit.expectPass(input);
+      process.env.VERBOSE && console.timeEnd('expectPass');
       const input2 = {
         ...input,
         quotient2: expandArray(cDiv.quotient, ntru.N + 1, 0)
