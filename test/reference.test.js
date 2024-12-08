@@ -52,11 +52,11 @@ describe('javascript reference implementation', () => {
     const ntru = new NTRU;
     ntru.generatePrivateKeyF();
     ntru.generateNewPublicKeyGH();
-    const encrypted1 = ntru.encryptBits(input1);
-    const encrypted2 = ntru.encryptBits(input2);
+    const encrypted1 = ntru.encryptBits(input1).value;
+    const encrypted2 = ntru.encryptBits(input2).value;
     const encryptedSum = addPolynomials(encrypted1, encrypted2, ntru.q);
     const decrypted = ntru.decryptBits(encryptedSum);
-    deepStrictEqual(decrypted, sum);
+    deepStrictEqual(decrypted.value, sum);
   });
 
 });

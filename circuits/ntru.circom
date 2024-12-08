@@ -183,8 +183,8 @@ template VerifyEncrypt(q, nq, N) {
   signal input m[N];
   signal input h[N];
   var newSize = N + N - 1;
-  signal input quotient[N+1];
-  signal input remainder[N+1];
+  signal input quotientE[N+1];
+  signal input remainderE[N+1];
 
   var rhq[newSize] = MultiplyPolynomials(N)(r, h);
   for(var i = 0; i<N; i++) {
@@ -197,7 +197,7 @@ template VerifyEncrypt(q, nq, N) {
   var I[N+1];
   I[0] = 1;
   I[N] = q-1;
-  VerifyDividePolynomials(q, nq, newSize, N+1)(rhq, I, quotient, remainder);
+  VerifyDividePolynomials(q, nq, newSize, N+1)(rhq, I, quotientE, remainderE);
 }
 
 template VerifyDecrypt(q, nq, p, np, N) {

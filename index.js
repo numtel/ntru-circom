@@ -50,27 +50,87 @@ export default class NTRU {
   }
   // Generate a new public key
   generateNewPublicKeyGH() {
-    this.generatePublicKeyH(generateCustomArray(this.N, this.dg, this.dg));
+    this.g = generateCustomArray(this.N, this.dg, this.dg);
+    this.generatePublicKeyH();
   }
   // Generate a public key given a specific generation secret
-  generatePublicKeyH(gArr) {
+  generatePublicKeyH() {
     if(!this.f) throw new Error('missing private key F');
-    this.g = gArr;
-    this.h = genH(this.p, this.q, this.fq, this.g, this.I);
+    if(!this.g) throw new Error('missing private key G');
+    const pFq =  multiplyPolynomialsByScalar(this.fq, this.p, this.q);
+    const pFqG = multiplyPolynomials(pFq, this.g, this.q);
+    const {remainder} = dividePolynomials(pFqG, this.I, this.q);
+    this.h = trimPolynomial(remainder);
   }
   encryptStr(inputPlain) {
     // Max N bits since there's no provision to split into words
-    return this.encryptBits(stringToBits(inputPlain));
+    return this.encryptBits(stringToBits(inputPlain)).value;
   }
   decryptStr(encrypted) {
-    return bitsToString(expandArrayToMultiple(this.decryptBits(encrypted), 8));
+    return bitsToString(expandArrayToMultiple(this.decryptBits(encrypted).value, 8));
   }
   encryptBits(m) {
-    const r = generateCustomArray(this.N, this.dr, this.dr);
-    return encrypt(r, m, this.h, this.q, this.I);
+    // Transform negative values since the circuit doesn't handle them
+    const r = generateCustomArray(this.N, this.dr, this.dr).map(x=>x=== -1 ? this.p-1 : x);
+    const rhq =  multiplyPolynomials(r, this.h, this.q);
+    const rhqm = addPolynomials(m, rhq, this.q);
+    const {quotient, remainder} = dividePolynomials(rhqm, this.I, this.q);
+    const encrypted = trimPolynomial(remainder);
+    return {
+      value: encrypted,
+      inputs: {
+        r,
+        m: expandArray(m, this.N, 0),
+        h: expandArray(this.h, this.N, 0),
+        // Transform values to be within the field
+        quotientE: expandArray(quotient.map(x => x % this.q), this.N+1, 0),
+        remainderE: expandArray(remainder, this.N+1, 0),
+      },
+      params: [
+        this.q,
+        this.estimateNq(),
+        this.N,
+      ],
+    };
   }
   decryptBits(e) {
-    return decrypt(this.f, e, this.I, this.q, this.p, this.fp);
+    const f = this.f.map(x=>x=== -1 ? this.q-1 : x);
+    const a = multiplyPolynomials(f, e, this.q);
+    const aDiv = dividePolynomials(a, this.I, this.q);
+    // This 'off-by-one' somehow fixes the value so it can calculate in circom
+    // the same way without needing to use negative numbers
+    const aDivP = aDiv.remainder.map(x => x > this.q/2 ? (x+1)%this.p : x%this.p);
+    const c = multiplyPolynomials(this.fp, aDivP, this.p);
+    const cDiv = dividePolynomials(c, this.I, this.p);
+    const decrypted = trimPolynomial(cDiv.remainder);
+    return {
+      value: decrypted,
+      inputs: {
+        f: expandArray(f, this.N, 0),
+        fp: expandArray(this.fp, this.N, 0),
+        e: expandArray(e, this.N, 0),
+        quotient1: expandArray(aDiv.quotient, this.N + 1, 0),
+        remainder1: expandArray(aDiv.remainder, this.N + 1, 0),
+        quotient2: expandArray(cDiv.quotient, this.N + 1, 0),
+        remainder2: expandArray(cDiv.remainder, this.N + 1, 0),
+      },
+      params: [
+        this.q,
+        this.estimateNq(),
+        this.p,
+        this.estimateNp(),
+        this.N,
+      ],
+    };
+  }
+  // Helpers that estimate the maximum value before modulus
+  // This is a guess that should hopefully wildly overshoot the actually value
+  // TODO make this more accurate
+  estimateNq() {
+    return Math.ceil(Math.log2(this.N * this.N * this.q * this.df));
+  }
+  estimateNp() {
+    return Math.ceil(Math.log2(this.N * this.N * this.p * this.df));
   }
 }
 
@@ -175,7 +235,7 @@ export function dividePolynomials(a, b, p) {
 }
 
 // Function to multiply a polynomial by a scalar modulo p
-export function multiplyPolynomialsByScalar(poly, scalar, p) {
+function multiplyPolynomialsByScalar(poly, scalar, p) {
   return poly.map(coeff => (coeff * scalar) % p);
 }
 
@@ -232,7 +292,7 @@ function extendedEuclideanAlgorithm(a, b, p) {
   };
 }
 
-export function generateCustomArray(length, numOnes, numNegOnes) {
+function generateCustomArray(length, numOnes, numNegOnes) {
   if (numOnes + numNegOnes > length) {
     throw new Error("The total of 1s and -1s cannot exceed the array length.");
   }
@@ -285,31 +345,6 @@ function polyInv(polyIn, polyI, polyMod) {
   }
 }
 
-// Generate public key
-function genH(p, q, fq, g, I) {
-  const pFq =  multiplyPolynomialsByScalar(fq, p, q);
-  const pFqG = multiplyPolynomials(pFq, g, q);
-  const {remainder} = dividePolynomials(pFqG, I, q);
-  return trimPolynomial(remainder);
-}
-
-export function encrypt(r, m, h, q, I) {
-  const rhq =  multiplyPolynomials(r, h, q);
-  const rhqm = addPolynomials(m, rhq, q);
-  const {remainder} = dividePolynomials(rhqm, I, q);
-  return trimPolynomial(remainder);
-}
-
-export function decrypt(f, e, I, q, p, fp) {
-  const a = multiplyPolynomials(f, e, q);
-  // This 'off-by-one' somehow fixes the value so it can calculate in circom
-  // the same way without needing to use negative numbers
-  const aDiv = dividePolynomials(a, I, q).remainder.map(x => (x > q/2 ? x + 1 : x) % p);
-  const c = multiplyPolynomials(fp, aDiv, p);
-  const cDiv = dividePolynomials(c, I, p);
-  return trimPolynomial(cDiv.remainder);
-}
-
 function expandArrayToMultiple(array, multiple) {
   if (!Array.isArray(array)) {
     throw new Error("First argument must be an array.");
@@ -326,6 +361,10 @@ function expandArrayToMultiple(array, multiple) {
   }
 
   return array;
+}
+
+export function expandArray(arr, len, fill) {
+  return [...arr, ...Array(len - arr.length).fill(fill)];
 }
 
 function stringToBits(str) {
