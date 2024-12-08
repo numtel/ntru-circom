@@ -169,6 +169,7 @@ describe('circom implementation', () => {
     });
   });
 
+  // Test encryption/decryption verification at different key sizes
   [
     {
       // very small keys, not secure, but fast
@@ -200,11 +201,6 @@ describe('circom implementation', () => {
       }
     },
   ].forEach((profile, index) => {
-    function calcMaxNq(ntru) {
-      // Helper that estimates the maximum value before modulus
-      // This is a guess that should hopefully wildly overshoot the actually value
-      return ntru.N * ntru.N * ntru.q * ntru.df;
-    }
 
     it(`should verify an encryption #${index}`, async () => {
       if(profile.confirm && !profile.confirm()) return;
