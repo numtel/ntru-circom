@@ -43,10 +43,9 @@ Default | 167 | 128 | 3
 
 Source: [Wikipedia](https://en.wikipedia.org/wiki/NTRUEncrypt#Table_1:_Parameters)
 
-> [!CAUTION]
-> The values in this table do not include `df`, `dg`, `dr` parameters.
+> [!TIP]
 >
-> More details in the [Choosing Parameters for NTRUEncrypt paper](https://jmschanck.info/papers/20150718-ntruparams.pdf)
+> The [Choosing Parameters for NTRUEncrypt paper](https://jmschanck.info/papers/20150718-ntruparams.pdf) suggests using ~`N/3` for `df`, `dg`, `dr` parameters.
 
 ## Javascript implementation
 

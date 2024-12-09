@@ -159,6 +159,9 @@ describe('circom implementation', () => {
     {
       N: 701,
       q: 8192,
+      df: Math.floor(701/3),
+      dg: Math.floor(701/3),
+      dr: Math.floor(701/3),
       confirm: () => {
         if(!process.env.GO_LARGE) {
           console.log('      Set GO_LARGE=1 env var to run this test case, it is big!');

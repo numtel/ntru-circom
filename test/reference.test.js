@@ -33,10 +33,9 @@ describe('javascript reference implementation', () => {
     const ntru = new NTRU({
       N: 701,
       q: 8192,
-      // TODO create a graph that shows the time to generate more complex keys
-//       df: 2500,
-//       dg: 2000,
-//       dr: 2000,
+      df: Math.floor(701/3),
+      dg: Math.floor(701/3),
+      dr: Math.floor(701/3),
     });
     ntru.generatePrivateKeyF();
     ntru.generateNewPublicKeyGH();
