@@ -28,12 +28,27 @@ $ GO_LARGE=1 VERBOSE=1 npm test -- -f "encryption #1"
 $ GO_LARGE=1 VERBOSE=1 npm test -- -f "together #1"
 ```
 
-## Javascript class NTRU
+## Recommended parameters
 
 > [!CAUTION]
 > Default settings are not high security!
+
+Description | 	N  |	q  | 	p
+-----------|-----------|---|---------
+Default | 167 | 128 | 3
+128 bit security margin (NTRU-HPS) |	509 | 	2048 |	3
+192 bit security margin (NTRU-HPS) |	677 |	2048 |	3
+256 bit security margin (NTRU-HPS) |	821 |	4096 | 	3
+256 bit security margin (NTRU-HRSS) | 	701 | 8192 |	3
+
+Source: [Wikipedia](https://en.wikipedia.org/wiki/NTRUEncrypt#Table_1:_Parameters)
+
+> [!CAUTION]
+> The values in this table do not include `df`, `dg`, `dr` parameters.
 >
-> `N=701`, `q=8192` recommended for 256-bit equivalent security.
+> More details in the [Choosing Parameters for NTRUEncrypt paper](https://jmschanck.info/papers/20150718-ntruparams.pdf)
+
+## Javascript implementation
 
 ```js
 import NTRU from 'ntru-circom';
@@ -52,7 +67,7 @@ ntru.generateNewPublicKeyGH();
 const encrypted = ntru.encryptStr(inputStr);
 
 // Decryption returns original value
-if(ntru.decryptStr(encrypted) !== inputStr) throw new Error();
+if(ntru.decryptStr(encrypted) !== inputStr) throw new Error;
 ```
 
 ### `constructor(options)`
@@ -178,9 +193,10 @@ Verify that the private key is coherent (`f` matches `fp` or `fq`) or that the p
 
 ## References
 
-* [https://en.wikipedia.org/wiki/NTRUEncrypt](https://en.wikipedia.org/wiki/NTRUEncrypt)
-* [https://github.com/pointedsphere/NTRU_python](https://github.com/pointedsphere/NTRU_python)
-* [https://jmschanck.info/papers/20150718-ntruparams.pdf](https://jmschanck.info/papers/20150718-ntruparams.pdf)
+* [NTRUEncrypt on Wikipedia](https://en.wikipedia.org/wiki/NTRUEncrypt)
+* [pointedsphere/NTRU_python](https://github.com/pointedsphere/NTRU_python)
+* [Choosing Parameters for NTRUEncrypt](https://jmschanck.info/papers/20150718-ntruparams.pdf)
+* [A Chosen-Ciphertext Attack against NTRU](https://www.iacr.org/archive/crypto2000/18800021/18800021.pdf)
 
 ## License
 
