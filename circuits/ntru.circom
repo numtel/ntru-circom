@@ -237,8 +237,7 @@ template VerifyInverse(q, nq, N) {
   signal input fq[N];
   // All "+1" signals have 0 as the last value; it's just to match the I value
   signal input quotientI[N+1]; // intermediate value
-  signal input remainderI[N+1]; // ciphertext or pubkey
-  signal input expected[N+1]; // this will usually be a public input
+  signal input remainderI[N+1]; // fp/fq/h (this will usually be a public input)
 
   var newSize = N + N - 1;
   var a[newSize] = MultiplyPolynomialsMod(N, q, nq)(f, fq);
@@ -247,14 +246,4 @@ template VerifyInverse(q, nq, N) {
   I[0] = 1;
   I[N] = q-1;
   VerifyDividePolynomials(q, nq, newSize, N+1)(a, I, quotientI, remainderI);
-
-  remainderI[N] === 0;
-
-  component iseq[N];
-  for(var i = 0; i < N; i++) {
-    iseq[i] = IsEqual();
-    iseq[i].in[0] <== remainderI[i];
-    iseq[i].in[1] <== expected[i];
-    iseq[i].out === 1;
-  }
 }

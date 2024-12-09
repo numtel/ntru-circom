@@ -124,6 +124,11 @@ export default class NTRU {
     };
   }
   verifyKeysInputs() {
+    if(!this.f) throw new Error('missing private key F');
+    if(!this.fq) throw new Error('missing private key Fq');
+    if(!this.fp) throw new Error('missing private key Fp');
+    if(!this.g) throw new Error('missing private key G');
+    if(!this.h) throw new Error('missing public key H');
     const q = this.q;
     const nq = this.estimateNq();
     const p = this.p;
@@ -136,8 +141,14 @@ export default class NTRU {
     const g = this.g.map(x=>x=== -1 ? q-1 : x);
 
     const fqDiv = dividePolynomials(multiplyPolynomials(fq, fmodq, q), this.I, q);
+    if(fqDiv.remainder.length !== 1 && fqDiv.remainder[0] !== 1)
+      throw new Error('invalid fq');
     const fpDiv = dividePolynomials(multiplyPolynomials(fp, fmodp, p), this.I, p);
+    if(fpDiv.remainder.length !== 1 && fpDiv.remainder[0] !== 1)
+      throw new Error('invalid fp');
     const hDiv = dividePolynomials(multiplyPolynomials(fqp, g, q), this.I, q);
+    if(this.h.reduce((out, cur, index) => out || hDiv.remainder[index] !== cur, false))
+      throw new Error('invalid h');
 
     return {
       fq: {
@@ -147,7 +158,6 @@ export default class NTRU {
           fq: expandArray(fq, this.N, 0),
           quotientI: expandArray(fqDiv.quotient, this.N+1, 0),
           remainderI: expandArray(fqDiv.remainder, this.N+1, 0),
-          expected: expandArray([1], this.N+1, 0),
         },
       },
       fp: {
@@ -157,7 +167,6 @@ export default class NTRU {
           fq: expandArray(fp, this.N, 0),
           quotientI: expandArray(fpDiv.quotient, this.N+1, 0),
           remainderI: expandArray(fpDiv.remainder, this.N+1, 0),
-          expected: expandArray([1], this.N+1, 0),
         },
       },
       h: {
@@ -167,7 +176,6 @@ export default class NTRU {
           fq: expandArray(fqp, this.N, 0),
           quotientI: expandArray(hDiv.quotient, this.N+1, 0),
           remainderI: expandArray(hDiv.remainder, this.N+1, 0),
-          expected: expandArray(this.h, this.N+1, 0),
         },
       },
     };

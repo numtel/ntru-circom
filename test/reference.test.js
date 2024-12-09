@@ -44,6 +44,8 @@ describe('javascript reference implementation', () => {
     strictEqual(ntru.decryptStr(encrypted), inputStr);
   });
 
+  // summing ciphertexts increases chances for decryption failure
+  // this test may fail
   it('should exhibit additive homomorphism', () => {
     // Plaintext bits are actually trinary
     const input1 = [1,2,1,0,1];
