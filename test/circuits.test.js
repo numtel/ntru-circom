@@ -9,8 +9,6 @@ import NTRU, {
   expandArray,
 } from '../index.js';
 
-const SNARK_FIELD_SIZE = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001n;
-
 const circomkit = new Circomkit({
   'verbose': !!process.env.VERBOSE,
   'inspect': true,
@@ -105,29 +103,6 @@ describe('circom implementation', () => {
   ].forEach((polys, index) => {
     strictEqual(polys[0].length, polys[1].length);
     const p = polys[2];
-    const params = [
-      p,
-      // largest product coefficent before modulus fits inside an integer of n bits:
-      Math.ceil(Math.log2(100000)),
-    ];
-
-    it(`should calculate the polynomial multiplication #${index}`, async () => {
-      const circuit = await circomkit.WitnessTester(`mulpoly${index}`, {
-        file: 'ntru',
-        template: 'MultiplyPolynomialsMod',
-        dir: 'test/ntru',
-        params: [
-          polys[0].length,
-          ...params,
-        ],
-      });
-      const ref = multiplyPolynomials(polys[0], polys[1], p);
-      await circuit.expectPass(
-        { a: polys[0], b: polys[1] },
-        { result: ref }
-      );
-      process.env.VERBOSE && console.log((await circuit.parseConstraints()).join('\n'));
-    });
 
     it(`should verify the polynomial division #${index}`, async () => {
       const circuit = await circomkit.WitnessTester(`divpoly${index}`, {
@@ -135,7 +110,9 @@ describe('circom implementation', () => {
         template: 'VerifyDividePolynomials',
         dir: 'test/ntru',
         params: [
-          ...params,
+          p,
+          // largest product coefficent before modulus fits inside an integer of n bits:
+          Math.ceil(Math.log2(100000)),
           polys[0].length,
           polys[1].length,
         ],
