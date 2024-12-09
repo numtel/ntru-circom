@@ -254,42 +254,27 @@ describe('circom implementation', () => {
       await circuit.expectFail(input2);
     });
 
-    it(`should verify encrypt/decrypt together #${index}`, async () => {
-      if(profile.confirm && !profile.confirm()) return;
-      const ntru = new NTRU(profile);
-      ntru.generatePrivateKeyF();
-      ntru.generateNewPublicKeyGH();
+    ['fq', 'fp', 'h'].forEach(caseName => {
+      it(`should verify ${caseName} #${index}`, async () => {
+        if(profile.confirm && !profile.confirm()) return;
+        const ntru = new NTRU(profile);
+        ntru.generatePrivateKeyF();
+        ntru.generateNewPublicKeyGH();
+        const thisCase = ntru.verifyKeysInputs()[caseName];
 
-      const m = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1];
-      const encrypted = ntru.encryptBits(m);
-      const decrypted = ntru.decryptBits(encrypted.value);
+        process.env.VERBOSE && console.time('compile');
+        const circuit = await circomkit.WitnessTester(`together`, {
+          file: 'ntru',
+          template: 'VerifyInverse',
+          dir: 'test/ntru',
+          params: thisCase.params,
+        });
+        process.env.VERBOSE && console.timeEnd('compile');
 
-      process.env.VERBOSE && console.time('compile');
-      const circuit = await circomkit.WitnessTester(`together`, {
-        file: 'ntru',
-        template: 'VerifyEncryptAndDecrypt',
-        dir: 'test/ntru',
-        params: decrypted.params,
+        process.env.VERBOSE && console.time('expectPass');
+        await circuit.expectPass(thisCase.inputs);
+        process.env.VERBOSE && console.timeEnd('expectPass');
       });
-      process.env.VERBOSE && console.timeEnd('compile');
-
-      const input = {
-        ...encrypted.inputs,
-        ...decrypted.inputs,
-        // These values are duplicates in this template
-        e: [],
-        remainder2: [],
-      };
-
-      process.env.VERBOSE && console.time('expectPass');
-      await circuit.expectPass(input);
-      process.env.VERBOSE && console.timeEnd('expectPass');
-      const input2 = {
-        ...input,
-        // modify the quotient very slightly
-        quotient2: decrypted.inputs.quotient2.map((x, i) => i === 0 ? x + 1 : x),
-      };
-      await circuit.expectFail(input2);
     });
   });
 });

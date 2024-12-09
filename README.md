@@ -137,10 +137,26 @@ Returns object:
     quotient2, // verify final step
     remainder2, // decrypted plaintext
   },
-  // Parameters for VerifyDecrypt/VerifyEncryptAndDecrypt circuit compilation
+  // Parameters for VerifyDecrypt circuit compilation
   params: {q, nq, p, np, N},
 }
 ```
+
+### `verifyKeysInputs()`
+
+Generate the inputs and parameters for creating a `VerifyInverse` proof to prove coherency of a private key or that the public key matches the private key.
+
+Three cases are keys in the return object:
+
+Case | Usage
+-----|-----------
+`fp` | Use this to verify `fp` is derived from `f`, confirming a decryption
+`fq` | Use this as a first step if verifying `h` is derived from `f` in order to prove the user knows the private key for an encryption
+`h`  | Use this as a second step to verifying the public key
+
+> [!TIP]
+> In addition to verifying private key coherency (case `fp`), it is recommended to pad the message with data that can be confirmed during decryption.
+
 
 ## Circom Templates
 
@@ -156,11 +172,9 @@ Verifies that a ciphertext matches a given plaintext, publickey, and randomness.
 
 Verifies that a plaintext matches a given ciphertext and privatekey.
 
-### `VerifyEncryptAndDecrypt`
+### `VerifyInverse`
 
-Verifies an encryption and decryption of the same plaintext/ciphertext in order to ensure that the user knows the private key to the message they are encrypting.
-
-Verifying both operations together like this is much less computation than the straightforward approach of deriving the public key from the private key inside the circuit.
+Verify that the private key is coherent (`f` matches `fp` or `fq`) or that the public key is derived from a specific private key (`h` matches `fq` and `g`).
 
 ## References
 

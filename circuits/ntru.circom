@@ -230,36 +230,31 @@ template VerifyDecrypt(q, nq, p, np, N) {
 
 }
 
-// Use to encrypt a value and ensure that the user also knows the private key
-template VerifyEncryptAndDecrypt(q, nq, p, np, N) {
-  // Encryption signals
-  signal input r[N]; // randomness
-  signal input m[N]; // plaintext
-  signal input h[N]; // pubkey
+// Use to verify f matches fp/fq or fq,g matches h
+// (i.e. verify that the public key matches the private key)
+template VerifyInverse(q, nq, N) {
+  signal input f[N];
+  signal input fq[N];
   // All "+1" signals have 0 as the last value; it's just to match the I value
-  signal input quotientE[N+1]; // intermediate value
-  signal input remainderE[N+1]; // ciphertext
+  signal input quotientI[N+1]; // intermediate value
+  signal input remainderI[N+1]; // ciphertext or pubkey
+  signal input expected[N+1]; // this will usually be a public input
 
-  // Decryption signals
-  signal input f[N]; // privatekey
-  signal input fp[N]; // privatekey-ish
-  signal input quotient1[N+1]; // intermediate value
-  signal input remainder1[N+1]; // intermediate value
-  signal input quotient2[N+1]; // intermediate value
+  var newSize = N + N - 1;
+  var a[newSize] = MultiplyPolynomialsMod(N, q, nq)(f, fq);
 
-  VerifyEncrypt(q, nq, N)(r, m, h, quotientE, remainderE);
+  var I[N+1];
+  I[0] = 1;
+  I[N] = q-1;
+  VerifyDividePolynomials(q, nq, newSize, N+1)(a, I, quotientI, remainderI);
 
-  component dec = VerifyDecrypt(q, nq, p, np, N);
-  dec.f <== f;
-  dec.fp <== fp;
+  remainderI[N] === 0;
+
+  component iseq[N];
   for(var i = 0; i < N; i++) {
-    dec.e[i] <== remainderE[i];
+    iseq[i] = IsEqual();
+    iseq[i].in[0] <== remainderI[i];
+    iseq[i].in[1] <== expected[i];
+    iseq[i].out === 1;
   }
-  dec.quotient1 <== quotient1;
-  dec.remainder1 <== remainder1;
-  dec.quotient2 <== quotient2;
-  for(var i = 0; i < N; i++) {
-    dec.remainder2[i] <== m[i];
-  }
-  dec.remainder2[N] <== 0;
 }

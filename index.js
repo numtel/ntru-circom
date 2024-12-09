@@ -123,6 +123,55 @@ export default class NTRU {
       ],
     };
   }
+  verifyKeysInputs() {
+    const q = this.q;
+    const nq = this.estimateNq();
+    const p = this.p;
+    const np = this.estimateNp();
+    const fmodq = this.f.map(x=>x=== -1 ? q-1 : x);
+    const fmodp = this.f.map(x=>x=== -1 ? p-1 : x);
+    const fq = this.fq;
+    const fp = this.fp;
+    const fqp = fq.map(x=>x*p);
+    const g = this.g.map(x=>x=== -1 ? q-1 : x);
+
+    const fqDiv = dividePolynomials(multiplyPolynomials(fq, fmodq, q), this.I, q);
+    const fpDiv = dividePolynomials(multiplyPolynomials(fp, fmodp, p), this.I, p);
+    const hDiv = dividePolynomials(multiplyPolynomials(fqp, g, q), this.I, q);
+
+    return {
+      fq: {
+        params: [q, nq, this.N],
+        inputs: {
+          f: expandArray(fmodq, this.N, 0),
+          fq: expandArray(fq, this.N, 0),
+          quotientI: expandArray(fqDiv.quotient, this.N+1, 0),
+          remainderI: expandArray(fqDiv.remainder, this.N+1, 0),
+          expected: expandArray([1], this.N+1, 0),
+        },
+      },
+      fp: {
+        params: [p, np, this.N],
+        inputs: {
+          f: expandArray(fmodp, this.N, 0),
+          fq: expandArray(fp, this.N, 0),
+          quotientI: expandArray(fpDiv.quotient, this.N+1, 0),
+          remainderI: expandArray(fpDiv.remainder, this.N+1, 0),
+          expected: expandArray([1], this.N+1, 0),
+        },
+      },
+      h: {
+        params: [q, nq, this.N],
+        inputs: {
+          f: expandArray(g, this.N, 0),
+          fq: expandArray(fqp, this.N, 0),
+          quotientI: expandArray(hDiv.quotient, this.N+1, 0),
+          remainderI: expandArray(hDiv.remainder, this.N+1, 0),
+          expected: expandArray(this.h, this.N+1, 0),
+        },
+      },
+    };
+  }
   // Helpers that estimate the maximum value before modulus
   // This is a guess that should hopefully wildly overshoot the actually value
   // TODO make this more accurate
