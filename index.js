@@ -87,7 +87,7 @@ export default class NTRU {
       },
       params: [
         this.q,
-        this.estimateNq(),
+        this.calculateNq(),
         this.N,
       ],
     };
@@ -115,9 +115,9 @@ export default class NTRU {
       },
       params: [
         this.q,
-        this.estimateNq(),
+        this.calculateNq(),
         this.p,
-        this.estimateNp(),
+        this.calculateNp(),
         this.N,
       ],
     };
@@ -129,9 +129,9 @@ export default class NTRU {
     if(!this.g) throw new Error('missing private key G');
     if(!this.h) throw new Error('missing public key H');
     const q = this.q;
-    const nq = this.estimateNq();
+    const nq = this.calculateNq();
     const p = this.p;
-    const np = this.estimateNp();
+    const np = this.calculateNp();
     const fmodq = this.f.map(x=>x=== -1 ? q-1 : x);
     const fmodp = this.f.map(x=>x=== -1 ? p-1 : x);
     const fq = this.fq;
@@ -179,14 +179,14 @@ export default class NTRU {
       },
     };
   }
-  // Helpers that estimate the maximum value before modulus
-  // This is a guess that should hopefully wildly overshoot the actually value
-  // TODO make this more accurate
-  estimateNq() {
-    return Math.ceil(Math.log2(this.N * this.N * this.q * this.df));
+  // Helpers that calculate the maximum value before modulus
+  // See MultiplyPolynomials circom template comment
+  // The middle coefficient has N items summed which will be at most q*q
+  calculateNq() {
+    return Math.ceil(Math.log2(this.q * this.q * this.N));
   }
-  estimateNp() {
-    return Math.ceil(Math.log2(this.N * this.N * this.p * this.df));
+  calculateNp() {
+    return Math.ceil(Math.log2(this.p * this.p * this.N));
   }
 }
 
