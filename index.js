@@ -368,7 +368,9 @@ function generateCustomArray(length, numOnes, numNegOnes) {
 
   // Shuffle the array to randomize the positions of 1s, -1s, and 0s
   for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const uintArray = new Uint32Array(1);
+    crypto.getRandomValues(uintArray);
+    const j = uintArray[0] % (i + 1);
     [array[i], array[j]] = [array[j], array[i]];
   }
 
