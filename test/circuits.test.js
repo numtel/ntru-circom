@@ -17,6 +17,38 @@ const circomkit = new Circomkit({
 
 describe('circom implementation', () => {
 
+  it('CombineArray', async () => {
+    const maxVal = 8192;
+    const maxInputBits = Math.log2(maxVal);
+    const numInputsPerOutput = Math.floor(252/maxInputBits);
+    const arrLen = Math.ceil(701 / numInputsPerOutput) * numInputsPerOutput; // N=701 large key
+    const maxOutputBits = numInputsPerOutput * maxInputBits;
+    const outputSize = Math.ceil(arrLen / numInputsPerOutput);
+    const inArr = new Array(arrLen).fill(0).map(_ => Math.floor(Math.random() * maxVal));
+    const expected = inArr.reduce((out, cur, i) => {
+      const outIdx = Math.floor(i/numInputsPerOutput);
+      out[outIdx] += BigInt(cur) * BigInt(2 ** ((i % numInputsPerOutput) * maxInputBits));
+      return out;
+    }, new Array(outputSize).fill(0n));
+    const circuit = await circomkit.WitnessTester(`comar`, {
+      file: 'ntru',
+      template: 'CombineArray',
+      dir: 'test/ntru',
+      params: [maxInputBits, maxOutputBits, inArr.length],
+    });
+    const input = { in: inArr };
+    const values = await circuit.compute(input, ['out']);
+    await circuit.expectPass(input, { out: expected });
+
+    const witness = await circuit.calculateWitness(input);
+    await circuit.expectConstraintPass(witness);
+
+    const badWitness = await circuit.editWitness(witness, {
+      'main.out[0]': expected[0] + 1n,
+    });
+    await circuit.expectConstraintFail(badWitness);
+  });
+
   [
     [[1,4],[0,3], 7],
     [[1,2,3],[4,3,2], 7],

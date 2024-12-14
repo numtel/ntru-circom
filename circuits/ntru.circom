@@ -1,5 +1,6 @@
 pragma circom 2.1.0;
 
+include "circomlib/circuits/bitify.circom";
 include "circomlib/circuits/comparators.circom";
 
 // From https://pps-lab.com/blog/fhe_arithmetization/
@@ -246,4 +247,31 @@ template VerifyInverse(q, nq, N) {
   I[0] = 1;
   I[N] = q-1;
   VerifyDividePolynomials(q, nq, newSize, N+1)(a, I, quotientI, remainderI);
+}
+
+// For packing polynomials into fewer public outputs due to solidity size limit
+template CombineArray(maxInputBits, maxOutputBits, inputSize) {
+  var numInputsPerOutput = maxOutputBits \ maxInputBits;
+  var outputSize = inputSize \ numInputsPerOutput;
+
+  signal input in[inputSize];
+  signal output out[outputSize];
+
+  component bits[inputSize];
+  component nums[outputSize];
+  for(var i = 0; i<inputSize; i++) {
+    var pos = i % numInputsPerOutput;
+    var num = i \ numInputsPerOutput;
+    bits[i] = Num2Bits(maxInputBits);
+    if(pos == 0) {
+      nums[num] = Bits2Num(maxOutputBits);
+    }
+    bits[i].in <== in[i];
+    for(var j = 0; j<maxInputBits; j++) {
+      nums[num].in[pos * maxInputBits + j] <== bits[i].out[j];
+    }
+    if(pos == numInputsPerOutput - 1) {
+      out[num] <== nums[num].out;
+    }
+  }
 }
