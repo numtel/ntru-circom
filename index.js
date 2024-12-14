@@ -291,7 +291,7 @@ export function dividePolynomials(a, b, p) {
 }
 
 // Function to multiply a polynomial by a scalar modulo p
-function multiplyPolynomialsByScalar(poly, scalar, p) {
+export function multiplyPolynomialsByScalar(poly, scalar, p) {
   return poly.map(coeff => (coeff * scalar) % p);
 }
 
@@ -312,7 +312,7 @@ function multiplyPolynomialsByScalar(poly, scalar, p) {
 //                    = (x^2 + 2x + 3)*(2x^2 - 1) + 1
 //                    = 1 mod q
 // 
-function extendedEuclideanAlgorithm(a, b, p) {
+export function extendedEuclideanAlgorithm(a, b, p) {
   let r0 = a.slice();
   let r1 = b.slice();
   let s0 = [1];
@@ -348,7 +348,7 @@ function extendedEuclideanAlgorithm(a, b, p) {
   };
 }
 
-function generateCustomArray(length, numOnes, numNegOnes) {
+export function generateCustomArray(length, numOnes, numNegOnes) {
   if (numOnes + numNegOnes > length) {
     throw new Error("The total of 1s and -1s cannot exceed the array length.");
   }
@@ -378,7 +378,7 @@ function generateCustomArray(length, numOnes, numNegOnes) {
 }
 
 // Invert a polynomial
-function polyInv(polyIn, polyI, polyMod) {
+export function polyInv(polyIn, polyI, polyMod) {
   const exponent = Math.log2(polyMod);
   // If the modulus is a power of 2, use Galois towers
   if (Math.round(exponent) === exponent) {
@@ -403,7 +403,7 @@ function polyInv(polyIn, polyI, polyMod) {
   }
 }
 
-function expandArrayToMultiple(array, multiple) {
+export function expandArrayToMultiple(array, multiple) {
   if (!Array.isArray(array)) {
     throw new Error("First argument must be an array.");
   }
@@ -425,7 +425,7 @@ export function expandArray(arr, len, fill) {
   return [...arr, ...Array(len - arr.length).fill(fill)];
 }
 
-function stringToBits(str) {
+export function stringToBits(str) {
   let bitsArray = [];
   for (let i = 0; i < str.length; i++) {
     let charCode = str.charCodeAt(i);
@@ -435,7 +435,7 @@ function stringToBits(str) {
   return bitsArray;
 }
 
-function bitsToString(bitsArray) {
+export function bitsToString(bitsArray) {
   let str = '';
   for (let i = 0; i < bitsArray.length; i += 8) {
     let byte = bitsArray.slice(i, i + 8);
