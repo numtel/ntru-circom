@@ -275,3 +275,26 @@ template CombineArray(maxInputBits, maxOutputBits, inputSize) {
     }
   }
 }
+
+// Reverse of CombineArray
+template UnpackArray(maxInputBits, packedBits, packedSize, unpackedSize) {
+  var packPerElement = packedBits \ maxInputBits;
+  signal input in[packedSize];
+  signal output out[unpackedSize];
+
+  component bits[packedSize];
+  component nums[unpackedSize];
+  for(var i = 0; i<packedSize; i++) {
+    bits[i] = Num2Bits(packedBits);
+    bits[i].in <== in[i];
+
+    for(var p = 0; p<packPerElement; p++) {
+      var num = i*packPerElement + p;
+      nums[num] = Bits2Num(maxInputBits);
+      for(var j = 0; j<maxInputBits; j++) {
+        nums[num].in[j] <== bits[i].out[p*maxInputBits + j];
+      }
+      out[num] <== nums[num].out;
+    }
+  }
+}

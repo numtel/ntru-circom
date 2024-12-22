@@ -190,6 +190,10 @@ Verifies that a plaintext matches a given ciphertext and privatekey.
 
 Verify that the private key is coherent (`f` matches `fp` or `fq`) or that the public key is derived from a specific private key (`h` matches `fq` and `g`).
 
+### `CombineArray`/`UnpackArray`
+
+For importing or exporting data with fewer signals
+
 ## References
 
 * [NTRUEncrypt on Wikipedia](https://en.wikipedia.org/wiki/NTRUEncrypt)

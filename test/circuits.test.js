@@ -17,7 +17,7 @@ const circomkit = new Circomkit({
 
 describe('circom implementation', () => {
 
-  it('CombineArray', async () => {
+  it('CombineArray/UnpackArray', async () => {
     const maxVal = 8192;
     const maxInputBits = Math.log2(maxVal);
     const numInputsPerOutput = Math.floor(252/maxInputBits);
@@ -37,7 +37,6 @@ describe('circom implementation', () => {
       params: [maxInputBits, maxOutputBits, inArr.length],
     });
     const input = { in: inArr };
-    const values = await circuit.compute(input, ['out']);
     await circuit.expectPass(input, { out: expected });
 
     const witness = await circuit.calculateWitness(input);
@@ -47,6 +46,15 @@ describe('circom implementation', () => {
       'main.out[0]': expected[0] + 1n,
     });
     await circuit.expectConstraintFail(badWitness);
+
+    // Also unpacks to the same input
+    const circuitUnpack = await circomkit.WitnessTester(`unpackarr`, {
+      file: 'ntru',
+      template: 'UnpackArray',
+      dir: 'test/ntru',
+      params: [maxInputBits, maxOutputBits, outputSize, inArr.length],
+    });
+    await circuitUnpack.expectPass({in: expected}, {out: inArr});
   });
 
   [
