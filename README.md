@@ -171,6 +171,40 @@ Case | Usage
 > [!TIP]
 > In addition to verifying private key coherency (case `fp`), it is recommended to pad the message with data that can be confirmed during decryption.
 
+### Library functions
+
+```js
+import {
+    // general polynomial operations
+    degree, // compute degree of polynomial
+    trimPolynomial, // trim leading zeros from polynomial
+    modInverse, // compute multiplicative inverse mod p
+    addPolynomials,
+    subtractPolynomials,
+    multiplyPolynomials,
+    dividePolynomials,
+    multiplyPolynomialsByScalar,
+
+    // for inverting polynomials
+    extendedEuclidianAlgorithm,
+    polyInv,
+
+    // create a random array of given length with set number of 1, -1 values
+    generateCustomArray,
+
+    expandArrayToMultiple,
+    expandArray,
+
+    // format helpers
+    stringToBits,
+    bitsToString,
+    bigintToBits,
+    bitsToBigInt,
+
+    packOutput, // helper for invoking CombineArray template
+    unpackInput, // helper for invoking UnpackArray template
+} from 'ntru-circom';
+```
 
 ## Circom Templates
 

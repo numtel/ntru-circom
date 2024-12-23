@@ -455,3 +455,65 @@ export function bitsToString(bitsArray) {
   }
   return str;
 }
+
+export function bigintToBits(bigint) {
+  const bits = [];
+  // While the number is not zero, extract the least significant bit (LSB) and shift right
+  while (bigint > 0n) {
+      bits.push(Number(bigint & 1n)); // Get the LSB (0 or 1)
+      bigint >>= 1n; // Shift right by 1 bit
+  }
+  return bits;
+}
+
+export function bitsToBigInt(bits) {
+  return BigInt(`0b${bits.join('')}`);
+}
+
+export function packOutput(maxVal, dataLen, data) {
+  const maxInputBits = Math.log2(maxVal);
+  const numInputsPerOutput = Math.floor(252/maxInputBits);
+  const arrLen = Math.max(
+    Math.ceil(dataLen / numInputsPerOutput) * numInputsPerOutput,
+    numInputsPerOutput * 3, // need min of 3 output field elements
+  );
+  const maxOutputBits = numInputsPerOutput * maxInputBits;
+  const outputSize = Math.max(Math.ceil(arrLen / numInputsPerOutput), 3); // need min of 3 for burn details
+  const inArr = expandArray(data, arrLen, 0);
+  const expected = inArr.reduce((out, cur, i) => {
+    const outIdx = Math.floor(i/numInputsPerOutput);
+    out[outIdx] += BigInt(cur) * BigInt(2 ** ((i % numInputsPerOutput) * maxInputBits));
+    return out;
+  }, new Array(outputSize).fill(0n));
+  const inputSize = (outputSize * numInputsPerOutput) / maxInputBits;
+  return {
+    maxInputBits,
+    maxOutputBits,
+    outputSize,
+    arrLen,
+    expected,
+  }
+}
+
+export function unpackInput(maxVal, packedBits, data) {
+  const maxInputBits = Math.log2(maxVal);
+  const numInputsPerOutput = packedBits/maxInputBits;
+  const unpackedSize = numInputsPerOutput * data.length;
+  const mask = (1n << BigInt(maxInputBits)) - 1n;
+  const unpacked = trimPolynomial(data.reduce((out, cur, i) => {
+    for(let j = 0; j < numInputsPerOutput; j++) {
+      const shift = BigInt(j * maxInputBits);
+      const chunk = (cur >> shift) & mask;
+      out[i * numInputsPerOutput + j] = Number(chunk);
+    }
+    return out;
+  }, new Array(unpackedSize).fill(0)));
+
+  return {
+    maxInputBits,
+    packedBits,
+    packedSize: data.length,
+    unpackedSize,
+    unpacked,
+  };
+}
