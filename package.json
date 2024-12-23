@@ -1,6 +1,6 @@
 {
   "name": "ntru-circom",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "NTRU encryption in Javascript and Circom",
   "type": "module",
   "main": "index.js",

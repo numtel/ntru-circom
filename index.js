@@ -31,6 +31,17 @@ export default class NTRU {
     this.f = fArr;
     this.fq = polyInv(this.f, this.I, this.q);
     this.fp = polyInv(this.f, this.I, this.p);
+
+    // check if fp,fq match f like verifyKeysInputs
+    const fmodq = this.f.map(x=>x=== -1 ? q-1 : x);
+    const fmodp = this.f.map(x=>x=== -1 ? p-1 : x);
+
+    const fqDiv = dividePolynomials(multiplyPolynomials(this.fq, fmodq, q), this.I, q);
+    if(fqDiv.remainder.length !== 1 && fqDiv.remainder[0] !== 1)
+      throw new Error('invalid fq');
+    const fpDiv = dividePolynomials(multiplyPolynomials(this.fp, fmodp, p), this.I, p);
+    if(fpDiv.remainder.length !== 1 && fpDiv.remainder[0] !== 1)
+      throw new Error('invalid fp');
   }
   // Generate a new private key
   generatePrivateKeyF() {
