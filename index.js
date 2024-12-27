@@ -28,6 +28,8 @@ export default class NTRU {
   }
   // Load a specific private key
   loadPrivateKeyF(fArr) {
+    const {p, q} = this;
+
     this.f = fArr;
     this.fq = polyInv(this.f, this.I, this.q);
     this.fp = polyInv(this.f, this.I, this.p);
@@ -42,17 +44,23 @@ export default class NTRU {
     const fpDiv = dividePolynomials(multiplyPolynomials(this.fp, fmodp, p), this.I, p);
     if(fpDiv.remainder.length !== 1 && fpDiv.remainder[0] !== 1)
       throw new Error('invalid fp');
+
+    return true;
   }
   // Generate a new private key
   generatePrivateKeyF() {
     const maxTries = 100;
     let i = 0;
+    let retval;
     while(!(this.fq && this.fp) && i++ < maxTries) {
       try {
-        this.loadPrivateKeyF(generateCustomArray(this.N, this.df, this.df - 1));
+        retval = this.loadPrivateKeyF(generateCustomArray(this.N, this.df, this.df - 1));
       } catch(error) {
         // no-op
       }
+    }
+    if(!retval) {
+      throw new Error('failed to verify f against fp,fq');
     }
     if(!this.fq || !this.fp) {
       throw new Error('Could not find invertible f');
