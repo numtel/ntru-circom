@@ -479,8 +479,8 @@ export function bitsToBigInt(bits) {
 }
 
 export function packOutput(maxVal, dataLen, data) {
-  const maxInputBits = Math.log2(maxVal);
-  const numInputsPerOutput = Math.floor(252/maxInputBits);
+  const maxInputBits = Math.floor(Math.log2(maxVal) + 1);
+  const numInputsPerOutput = Math.floor(252 / maxInputBits);
   const arrLen = Math.max(
     Math.ceil(dataLen / numInputsPerOutput) * numInputsPerOutput,
     numInputsPerOutput * 3, // need min of 3 output field elements
@@ -488,40 +488,42 @@ export function packOutput(maxVal, dataLen, data) {
   const maxOutputBits = numInputsPerOutput * maxInputBits;
   const outputSize = Math.max(Math.ceil(arrLen / numInputsPerOutput), 3); // need min of 3 for burn details
   const inArr = expandArray(data, arrLen, 0);
-  const expected = inArr.reduce((out, cur, i) => {
-    const outIdx = Math.floor(i/numInputsPerOutput);
-    out[outIdx] += BigInt(cur) * BigInt(2 ** ((i % numInputsPerOutput) * maxInputBits));
-    return out;
-  }, new Array(outputSize).fill(0n));
-  const inputSize = (outputSize * numInputsPerOutput) / maxInputBits;
+
+  const expected = new Array(outputSize).fill(0n);
+  for (let i = 0; i < inArr.length; i++) {
+    const outIdx = Math.floor(i / numInputsPerOutput);
+    expected[outIdx] += BigInt(inArr[i]) << BigInt((i % numInputsPerOutput) * maxInputBits);
+  }
+
   return {
     maxInputBits,
     maxOutputBits,
     outputSize,
     arrLen,
     expected,
-  }
+  };
 }
 
 export function unpackInput(maxVal, packedBits, data) {
-  const maxInputBits = Math.log2(maxVal);
-  const numInputsPerOutput = packedBits/maxInputBits;
+  const maxInputBits = Math.floor(Math.log2(maxVal) + 1);
+  const numInputsPerOutput = Math.floor(packedBits / maxInputBits);
   const unpackedSize = numInputsPerOutput * data.length;
   const mask = (1n << BigInt(maxInputBits)) - 1n;
-  const unpacked = trimPolynomial(data.reduce((out, cur, i) => {
-    for(let j = 0; j < numInputsPerOutput; j++) {
+
+  const unpacked = new Array(unpackedSize).fill(0);
+  for (let i = 0; i < data.length; i++) {
+    for (let j = 0; j < numInputsPerOutput; j++) {
       const shift = BigInt(j * maxInputBits);
-      const chunk = (cur >> shift) & mask;
-      out[i * numInputsPerOutput + j] = Number(chunk);
+      const chunk = (data[i] >> shift) & mask;
+      unpacked[i * numInputsPerOutput + j] = Number(chunk);
     }
-    return out;
-  }, new Array(unpackedSize).fill(0)));
+  }
 
   return {
     maxInputBits,
     packedBits,
     packedSize: data.length,
     unpackedSize,
-    unpacked,
+    unpacked: trimPolynomial(unpacked),
   };
 }
