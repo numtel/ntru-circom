@@ -52,15 +52,12 @@ export default class NTRU {
     const maxTries = 100;
     let i = 0;
     let retval;
-    while(!(this.fq && this.fp) && i++ < maxTries) {
+    while((!retval || !(this.fq && this.fp)) && i++ < maxTries) {
       try {
         retval = this.loadPrivateKeyF(generateCustomArray(this.N, this.df, this.df - 1));
       } catch(error) {
         // no-op
       }
-    }
-    if(!retval) {
-      throw new Error('failed to verify f against fp,fq');
     }
     if(!this.fq || !this.fp) {
       throw new Error('Could not find invertible f');
