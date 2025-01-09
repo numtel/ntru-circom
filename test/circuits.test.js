@@ -135,6 +135,33 @@ describe('circom implementation', () => {
     });
   });
 
+  it('should have constrained modulus', async () => {
+    const y = 7, n = 6, p = 5, x = 7, q = 0;
+    const circuit = await circomkit.WitnessTester(`modulus_constraint`, {
+      file: 'ntru',
+      template: 'Modulus',
+      dir: 'test/ntru',
+      params: [p, n],
+    });
+    const witness = await circuit.calculateWitness({x});
+    const badWitness = await circuit.editWitness(witness, {
+      'main.y': y,
+      'main.q': q,
+      'main.ltQ.in[0]': 7,
+      'main.ltQ.in[1]': 0,
+      'main.ltQ.out': 0,
+      'main.ltQ.n2b.in': 71,
+      'main.ltQ.n2b.out[0]': 1,
+      'main.ltQ.n2b.out[1]': 1,
+      'main.ltQ.n2b.out[2]': 1,
+      'main.ltQ.n2b.out[3]': 0,
+      'main.ltQ.n2b.out[4]': 0,
+      'main.ltQ.n2b.out[5]': 0,
+      'main.ltQ.n2b.out[6]': 1,
+    });
+    await circuit.expectConstraintFail(badWitness);
+  });
+
   [
     [[1,2], [2,3], 8],
     [[1,2], [2,3], 3],
