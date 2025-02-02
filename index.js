@@ -255,16 +255,103 @@ export function subtractPolynomials(a, b, p) {
   return trimPolynomial(result);
 }
 
-// Function to multiply two polynomials modulo p
-export function multiplyPolynomials(a, b, p) {
-  if (a.length === 0 || b.length === 0) return [0];
-  const result = new Array(a.length + b.length - 1).fill(0);
-  for (let i = 0; i < a.length; i++) {
-    for (let j = 0; j < b.length; j++) {
-      result[i + j] = result[i + j] + a[i] * b[j];
+// Complex number helper functions.
+function addComplex(a, b) {
+  return { re: a.re + b.re, im: a.im + b.im };
+}
+
+function subtractComplex(a, b) {
+  return { re: a.re - b.re, im: a.im - b.im };
+}
+
+function multiplyComplex(a, b) {
+  return {
+    re: a.re * b.re - a.im * b.im,
+    im: a.re * b.im + a.im * b.re,
+  };
+}
+
+// FFT implementation.
+// The array `a` is modified in place.
+// If invert === true, computes the inverse FFT.
+function fft(a, invert) {
+  const n = a.length;
+
+  // Bit-reversal permutation.
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) {
+      j -= bit;
+    }
+    j += bit;
+    if (i < j) {
+      const temp = a[i];
+      a[i] = a[j];
+      a[j] = temp;
     }
   }
-  return trimPolynomial(result.map(x=> x % p));
+
+  // Cooley–Tukey FFT.
+  for (let len = 2; len <= n; len <<= 1) {
+    const angle = (2 * Math.PI / len) * (invert ? -1 : 1);
+    const wlen = { re: Math.cos(angle), im: Math.sin(angle) };
+    for (let i = 0; i < n; i += len) {
+      let w = { re: 1, im: 0 };
+      for (let j = 0; j < len / 2; j++) {
+        const u = a[i + j];
+        const v = multiplyComplex(a[i + j + len / 2], w);
+        a[i + j] = addComplex(u, v);
+        a[i + j + len / 2] = subtractComplex(u, v);
+        w = multiplyComplex(w, wlen);
+      }
+    }
+  }
+
+  if (invert) {
+    for (let i = 0; i < n; i++) {
+      a[i].re /= n;
+      a[i].im /= n;
+    }
+  }
+}
+
+// Multiplies two polynomials a and b modulo p using FFT
+export function multiplyPolynomials(a, b, p) {
+  if (a.length === 0 || b.length === 0) return [0];
+
+  // Determine the size for FFT (next power of 2 >= a.length + b.length - 1).
+  let n = 1;
+  while (n < a.length + b.length - 1) n <<= 1;
+
+  // Initialize complex arrays for a and b.
+  const A = new Array(n);
+  const B = new Array(n);
+  for (let i = 0; i < n; i++) {
+    A[i] = { re: i < a.length ? a[i] : 0, im: 0 };
+    B[i] = { re: i < b.length ? b[i] : 0, im: 0 };
+  }
+
+  // Compute FFT on both arrays.
+  fft(A, false);
+  fft(B, false);
+
+  // Pointwise multiplication.
+  for (let i = 0; i < n; i++) {
+    A[i] = multiplyComplex(A[i], B[i]);
+  }
+
+  // Inverse FFT to get the convolved coefficients.
+  fft(A, true);
+
+  // Build the result polynomial, reducing each coefficient modulo p.
+  const resultLength = a.length + b.length - 1;
+  const result = new Array(resultLength);
+  for (let i = 0; i < resultLength; i++) {
+    // Rounding is needed because of floating-point imprecision.
+    result[i] = ((Math.round(A[i].re)) % p + p) % p;
+  }
+
+  return trimPolynomial(result);
 }
 
 // Function to divide two polynomials modulo p
