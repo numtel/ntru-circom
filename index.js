@@ -359,36 +359,43 @@ export function dividePolynomials(a, b, p) {
   if (degree(b) === -1) {
     throw new Error("Cannot divide by zero polynomial.");
   }
+
+  // Make a copy of the dividend.
   let dividend = a.slice();
   const divisor = b.slice();
-  let degDividend = degree(dividend);
   const degDivisor = degree(divisor);
-  const resultSize = degDividend - degDivisor + 1;
-  const result = new Array(resultSize < 0 ? 0 : resultSize).fill(0);
 
-  while (degDividend >= degDivisor && degDividend >= 0) {
-    const degDiff = degDividend - degDivisor;
-    const leadCoeffDividend = dividend[degDividend];
-    const leadCoeffDivisor = divisor[degDivisor];
-    const invLeadCoeffDivisor = modInverse(leadCoeffDivisor, p);
+  // Initialize quotient with the maximum possible size.
+  const quotient = new Array(Math.max(0, degree(a) - degDivisor + 1)).fill(0);
 
-    if (invLeadCoeffDivisor === null) {
+  // Perform long division.
+  while (degree(dividend) >= degDivisor) {
+    const degDividend = degree(dividend);
+    const leadDividend = dividend[degDividend];
+    const leadDivisor = divisor[degDivisor];
+    const invLeadDivisor = modInverse(leadDivisor, p);
+    if (invLeadDivisor === null) {
       throw new Error("No inverse exists for division.");
     }
 
-    const coeff = (leadCoeffDividend * invLeadCoeffDivisor) % p;
-    result[degDiff] = coeff;
+    // Compute the coefficient for the term corresponding to x^(degDividend - degDivisor).
+    const coeff = (leadDividend * invLeadDivisor) % p;
+    const degDiff = degDividend - degDivisor;
+    quotient[degDiff] = coeff;
 
-    const term = new Array(degDiff + 1).fill(0);
-    term[degDiff] = coeff;
-
-    const subtractTerm = multiplyPolynomials(divisor, term, p);
-    dividend = subtractPolynomials(dividend, subtractTerm, p);
-    degDividend = degree(dividend);
+    // Subtract coeff * x^(degDiff) * divisor from dividend.
+    for (let i = 0; i <= degDivisor; i++) {
+      const index = i + degDiff;
+      // Ensure that dividend[index] exists; if not, treat it as 0.
+      dividend[index] = ((dividend[index] || 0) - coeff * divisor[i]) % p;
+      if (dividend[index] < 0) {
+        dividend[index] += p;
+      }
+    }
   }
 
   return {
-    quotient: trimPolynomial(result),
+    quotient: trimPolynomial(quotient),
     remainder: trimPolynomial(dividend)
   };
 }
